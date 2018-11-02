@@ -25,38 +25,36 @@ class MyNifty(ImageFormat):
         super().__init__()
 
     def read(self, path, filename):
-        # Reading the mask
-        #fname = '/home/willytell/Escritorio/LungCTDataBase/Nii_Vol/CTmask_nii/LIDC-IDRI-0001_GT1_Mask.nii.gz'
-
         self.image = sitk.ReadImage(os.path.join(path, filename))
-
         return True
 
-    #def save(self, path, filename):
+    def save(self, path, filename):
+        sitk.WriteImage(self.image, os.path.join(path, filename))
+        return True
 
 
     # CONVERTING from SimpleITK image to Numpy array
     def image2array(self):
-        if self.image is not None:
+        if (self.image is not None) and (self.volume is None):
             self.volume = sitk.GetArrayFromImage(self.image)
         else:
-            print("Error: In MyNifty class, image2array method, self.image is None and must be an image of type SimpleITK.")
+            print("Error: In MyNifty class, image2array method.")
 
     # CONVERTING from Numpy to SimpleITK image
     def array2image(self):
-        if self.volume is not None:
+        if (self.volume is not None) and (self.image is None):
             self.image = sitk.GetImageFromArray(self.volume)
         else:
-            print("Error: In MyNifty class, array2image method, self.volume is None and must be an array of type Numpy.")
+            print("Error: In MyNifty class, array2image method.")
 
-    def get_properties(self):
+    def record_properties(self):
         if self.image is not None:
-            origin = self.image.GetOrigin()
-            spacing = self.image.GetSpacing()
-            direction = self.image.GetDirection()
-            return {'origin': origin, 'spacing' : spacing, 'direction' : direction }
+            self.origin = self.image.GetOrigin()
+            self.spacing = self.image.GetSpacing()
+            self.direction = self.image.GetDirection()
+            return {'origin': self.origin, 'spacing' : self.spacing, 'direction' : self.direction }
         else:
-            print("Error: In MyNifty class, get_properties method, self.image is None and must be an image of type SimpleITK.")
+            print("Error: In MyNifty class, get_properties method.")
             return None
 
     # Remember to to set the image's origin, spacing, and possibly direction cosine matrix.
@@ -67,4 +65,8 @@ class MyNifty(ImageFormat):
             self.image.SetOrigin(properties['origin'])
             self.image.SetSpacing(properties['spacing'])
             self.image.SetDirection(properties['direction'])
+            return True
+        else:
+            print("Error: In MyNifty class, set_properties.")
+            return False
 

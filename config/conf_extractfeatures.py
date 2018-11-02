@@ -1,13 +1,22 @@
 # DB TYPE
-db_type                = "COMPRESSED NIFTY"   # [ "DICOM" | "NIFTY" | "COMPRESSED NIFTY"]
+#db_type                = "COMPRESSED NIFTY"   # [ "DICOM" | "NIFTY" | "COMPRESSED NIFTY"]
+
 
 # DB SOURCE PATHS
-input_db_path           = "/home/willytell/Escritorio/LungCTDataBase/Nii_Vol/CT_nii"
-input_db_mask_path      = "/home/willytell/Escritorio/LungCTDataBase/Nii_Vol/CTmask_nii"
+src_image_path          = "/home/willytell/Escritorio/LungCTDataBase/Nii_Vol/CT_nii"
+src_mask_path           = "/home/willytell/Escritorio/LungCTDataBase/Nii_Vol/CTmask_nii"
+
+mask_pattern            = '*.nii.gz'
 
 # OUTPUT PATHS
-output_db_path          = "/home/willytell/Escritorio/LungCTDataBase/lc3d/Nii_Vol/Output_CT_nii"
-output_db_mask_path     = "/home/willytell/Escritorio/LungCTDataBase/Nii_Vol/Output_CTmask_nii"
+dst_image_path          = "/home/willytell/Escritorio/LungCTDataBase/lc3d/Nii_Vol/CT_nii"
+dst_mask_path           = "/home/willytell/Escritorio/LungCTDataBase/lc3d/Nii_Vol/CTmask_nii"
+
+
+# Labeling
+labeling_se_dim         = '(3, 3, 3)' # Labeling structure_element dimension
+
+
 
 
 
