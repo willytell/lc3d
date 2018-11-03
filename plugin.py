@@ -288,19 +288,6 @@ class UniformExpandVBBox(ExpandVBBox):
             for label_number, minimal_vbbox in enumerate(vbbox_list):
                 if label_number != 0:
 
-                    ###################################################################
-                    # JUST TO CHECK IF IT IS NECESSARY EXPAND THE VBBOX.
-                    # count = np.zeros((ncomponents + 1), dtype=np.int)
-                    # volume = labeled[minimal_vbbox[0]:minimal_vbbox[1] + 1, \
-                    #                  minimal_vbbox[2]:minimal_vbbox[3] + 1, \
-                    #                  minimal_vbbox[4]:minimal_vbbox[5] + 1]
-                    # self.count_all_labels(volume, ncomponents, count)
-                    # print("count = {}".format(count))
-                    # bg_p, gt_p = self.get_percentage(count, label_number)
-                    # print("lable_number : {}".format(label_number))
-                    # print("Initial minimum vbbox: bg_p = {:.2f}, gt_p = {:.2f}".format(round(bg_p, 2), round(gt_p, 2)))
-                    # if self.backgroun_percentage > bg_p :
-                    ###################################################################
                     bg_p, _ = self.bg_p_stuff(labeled, minimal_vbbox, ncomponents, label_number)
 
                     if bg_p < self.backgroun_percentage:   # if it's necessary to expand the vbbox.
@@ -313,14 +300,6 @@ class UniformExpandVBBox(ExpandVBBox):
                             print("    tmp_vbbox (xmin, xmax, ymin, ymax, zmin, zmax) = ({})".format(tmp_vbbox))
                             tmp_vbbox = self.expand(labeled, tmp_vbbox, label_number, ncomponents, self.nvoxel, growth_xyz)
                             print("NEW tmp_vbbox (xmin, xmax, ymin, ymax, zmin, zmax) = ({})".format(tmp_vbbox))
-                            # count = np.zeros((ncomponents + 1), dtype=np.int)
-                            # volume = labeled[tmp_vbbox[0]:tmp_vbbox[1]+1, \
-                            #                  tmp_vbbox[2]:tmp_vbbox[3]+1, \
-                            #                  tmp_vbbox[4]:tmp_vbbox[5]+1]
-                            # self.count_all_labels(volume, ncomponents, count)
-                            # bg_p, gt_p = self.get_percentage(count, label_number)
-                            # print("bg_p = {0:.2f}, gt_p = {0:.2f}".format(round(bg_p,2), round(gt_p,2)))
-                            # if self.backgroun_percentage <= bg_p or not np.any(growth_xyz):
 
                             bg_p, _ = self.bg_p_stuff(labeled, tmp_vbbox, ncomponents, label_number)
                             if self.backgroun_percentage <= bg_p or not np.any(growth_xyz):
