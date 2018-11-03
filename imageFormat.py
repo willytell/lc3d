@@ -26,10 +26,12 @@ class MyNifty(ImageFormat):
 
     def read(self, path, filename):
         self.image = sitk.ReadImage(os.path.join(path, filename))
+        print("MyNifty, reading: {}".format(os.path.join(path, filename)))
         return True
 
     def save(self, path, filename):
         sitk.WriteImage(self.image, os.path.join(path, filename))
+        print("MyNifty, writing: {}".format(os.path.join(path, filename)))
         return True
 
 

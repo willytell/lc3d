@@ -26,7 +26,7 @@ class NiftyManagement(Plugin):
         super().__init__(name)
 
     def masks2read(self):
-        self.src_mask_list = [os.path.basename(x) for x in glob.glob(os.path.join(self.src_mask_path, self.mask_pattern))]
+        self.src_mask_list = [os.path.basename(x) for x in sorted(glob.glob(os.path.join(self.src_mask_path, self.mask_pattern)))]
         self.index = 0    # index to be used with the self.src_mask_list list.
         return True
 
@@ -57,6 +57,11 @@ class NiftyManagement(Plugin):
 
     def process(self, config, data):
         print("NiftyManagement plugin...")
+
+        if data.get('CT') is not None:  # if already exist
+            data.pop(self.name)  # remove item
+            print("Removing to data: 'CT':[image, mask]")
+
         if self.index < len(self.src_mask_list):
             self.mask = MyNifty()
             mask_filename = self.src_mask_list[self.index]
@@ -69,10 +74,6 @@ class NiftyManagement(Plugin):
             self.image.read(self.src_image_path, image_filename)
             self.image.record_properties()
             self.image.image2array()
-
-
-            if data.get('CT') is not None: # if already exist
-                data.pop(self.name)  # remove item
 
             data['CT'] = [self.image, self.mask]     # add item
             print("Adding to data: 'CT':[image, mask]")
