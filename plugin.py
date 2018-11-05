@@ -1,9 +1,12 @@
 import SimpleITK as sitk
 import numpy as np
+import os
 
 from configuration import Configuration
 from abc import ABC, abstractmethod
 from scipy.ndimage.measurements import label
+from imageFormat import MyNifty
+from utils import get_dst_filename_nifty
 
 class Plugin(ABC):
     def __init__(self, name):
@@ -50,7 +53,6 @@ class Labeling(Plugin):
 
         else:
             print('Error: In the Labeling class, process() method do not found CT key to process.')
-
 
 
 
@@ -104,7 +106,8 @@ class VolumeBBox(Plugin):
                     self.vbbox_list.append(vbbox)
                     del mask
 
-                assert ncomponents == (len(self.vbbox_list)-1), "In VolumeBBox, ncomponents must be equal to the amount of vbbox."
+                # ncomponents does not have included the background.
+                assert (ncomponents + 1) == len(self.vbbox_list), "In VolumeBBox, ncomponents must be equal to the amount of vbbox."
 
                 # Add the new item to data
                 data['CT_mask_vbbox'] = self.vbbox_list
@@ -116,49 +119,209 @@ class VolumeBBox(Plugin):
 
 
 class ExpandVBBox(Plugin):
-    def __init__(self,name):
-        super().__init__(name)
-
-    @abstractmethod
-    def expand(self):
-        pass
-
-
-class UniformExpandVBBox(ExpandVBBox):
-    def __init__(self, name, backgroun_percentage, groundtruth_percentage, nvoxel):
-        self.backgroun_percentage = backgroun_percentage
-        self.groundtruth_percentage = groundtruth_percentage
-        self.nvoxel = nvoxel
-        self.volume = None
-        self.mask = None
+    def __init__(self,name, strategy):
+        self.strategy = strategy
         self.expanded_vbbox_list = []
         super().__init__(name)
 
+    def context_interface(self, labeled, minimal_vbbox, ncomponents, label_number):
+        vbbox = self.strategy.expand(labeled, minimal_vbbox, ncomponents, label_number)
+        return vbbox
 
-    # self.count = np.zeros(ncomponents+1)
+    def process(self, config, data):
+        print("UniformExpandVBBox plugin...")
+
+        # if already exist an item, then remove it.
+        if data.get('CT_mask_expanded') is not None:
+            data.pop('CT_mask_expanded')
+            print("Removeing to data: 'CT_mask_expanded':expanded_vbbox_list")
+
+        # Get some items from data dictionary
+        if ('CT_mask_labeled' in data) and ('CT_mask_vbbox' in data):
+            print("CT_mask_labeled and CT_mask_vbbox are present keys in the data dictionary")
+
+            labeled, ncomponents = data['CT_mask_labeled']
+            vbbox_list = data['CT_mask_vbbox']  # list with minimals vbbox.
+
+            for label_number, minimal_vbbox in enumerate(vbbox_list):
+                if label_number != 0:
+                    vbbox = self.context_interface(labeled, minimal_vbbox, ncomponents, label_number)
+                    self.expanded_vbbox_list.append(vbbox)
+                else:
+                    # We artificially add as first item a None, which corresponds to the background.
+                    # This let us to have label '1' in the index 1, label '2' in the index 2, and so on.
+                    self.expanded_vbbox_list.append(None)
+
+            # ncomponents does not have included the background.
+            assert (ncomponents+1)== len(self.expanded_vbbox_list), "ExpandVBBox, ncomponents must be equal to the amount of vbbox."
+
+            # Add the new item to data
+            data['CT_mask_expanded'] = self.expanded_vbbox_list
+            print("Adding to data: 'CT_mask_expanded':expanded_vbbox_list")
+
+
+class ExpansionStrategy(ABC):
+    def __init__(self, name):
+        self.name = name
+        super().__init__()
+
+        @abstractmethod
+        def expand(self):
+            pass
+
+
+class UniformExpansion(ExpansionStrategy):
+    def __init__(self, name, background_percentage, groundtruth_percentage, nvoxel, check_bg_percentage):
+        self.background_percentage = background_percentage
+        self.groundtruth_percentage = groundtruth_percentage
+        self.nvoxel = nvoxel
+        self.check_bg_percentage = check_bg_percentage
+        self.expanded_vbbox_list = []
+        super().__init__(name)
+
+    #count = np.zeros(ncomponents + 1)
     def count_all_labels(self, volume, ncomponents, count):
         for l in range(0, ncomponents + 1):   # include the label '0' that corresponds to background.
             count[l] = len(np.where(volume == l)[0])
 
-    def check_only_one_label(self, count, label_number):
-        assert label_number != 0, "UniformExpandVBBox, for check_only_one_label: lable_number must be different of background."
+    def one_label_present(self, count, label_number):
+        assert label_number != 0, "UniformExpand, one_label does not verify one label for background."
         if count[label_number] == count[1:].sum():  # background is discarded
-            #print("Only label {} present in the volume.".format(label_number))
+            #print("The label {} is the only one present in the volume.".format(label_number))
             return True
         else:
-            print("Checking the label {}, more than one label is present in the volume.".format(label_number))
+            #print("The label {} is not the only one present in the volume.".format(label_number))
             return False
 
     # Must be only background and one label present in the volume.
-    def get_percentage(self, count, label_number):
+    def percentage_calculation(self, count, label_number):
         bg_p = (count[0] * 100.0) / count.sum()   # background percentage
         gt_p = (count[label_number] * 100.0) / count.sum()  # groundtruth percentage
         return bg_p, gt_p
 
+    def get_percentage(self, labeled, vbbox, ncomponents, label_number):
+        count = np.zeros((ncomponents + 1), dtype=np.int)
+        volume = labeled[vbbox[0]:vbbox[1] + 1, \
+                         vbbox[2]:vbbox[3] + 1, \
+                         vbbox[4]:vbbox[5] + 1]
+        self.count_all_labels(volume, ncomponents, count)
+        print("label_number : {}".format(label_number))
+        print("count = {}".format(count))
+        bg_p, gt_p = self.percentage_calculation(count, label_number)
+        print("Percentage of vbbox: bg_p = {:.2f}, gt_p = {:.2f}".format(round(bg_p, 2), round(gt_p, 2)))
+        del count
 
-    # growth_xyz = np.arange((True, True, True, ..., True), dtype=bool)
-    def expand(self, labeled, minimal_bbox, label_number, ncomponents, nvoxel, growth_xyz):
-        bbox = minimal_bbox
+        return bg_p, gt_p
+
+
+    def uniform_expansion(self, labeled, initial_vbbox, label_number, ncomponents, nvoxel, growth_xyz):
+        #def expand(self, labeled, minimal_bbox, label_number, ncomponents, nvoxel, growth_xyz):
+
+
+    #####################################################################################################
+    #                                                                                                   #
+    #   We define five function, one for each direction in which is posible to increase the vbbox.      #
+    #                                                                                                   #
+    #   # increse in x negative direction                                                               #
+        def zero():
+            if growth_xyz[0]:
+                if lowest_idx_x <= (vbbox[0] - nvoxel):
+                    count = np.zeros((ncomponents + 1), dtype=np.int)
+                    volume = labeled[(vbbox[0]-nvoxel):vbbox[1]+1, vbbox[2]:vbbox[3]+1, vbbox[4]:vbbox[5]+1]
+                    self.count_all_labels(volume, ncomponents, count)
+                    if self.one_label_present(count, label_number):
+                        vbbox[0] -= nvoxel
+                    else:
+                        growth_xyz[0] = False
+                    del count
+                else:
+                    growth_xyz[0] = False
+
+        # increse in x positive direction
+        def one ():
+            if growth_xyz[1]:
+                if (vbbox[1] + nvoxel) < higest_idx_x:
+                    count = np.zeros((ncomponents + 1), dtype=np.int)
+                    volume = labeled[vbbox[0]:(vbbox[1] + nvoxel + 1), vbbox[2]:(vbbox[3] + 1), vbbox[4]:(vbbox[5] + 1)]
+                    self.count_all_labels(volume, ncomponents, count)
+                    if self.one_label_present(count, label_number):
+                        vbbox[1] += nvoxel
+                    else:
+                        growth_xyz[1] = False
+                    del count
+                else:
+                    growth_xyz[1] = False
+
+        # increse in y negative direction
+        def two():
+            if growth_xyz[2]:
+                if lowest_idx_y <= (vbbox[2] - nvoxel):
+                    count = np.zeros((ncomponents + 1), dtype=np.int)
+                    volume = labeled[vbbox[0]:(vbbox[1] + 1), (vbbox[2] - nvoxel):(vbbox[3] + 1), vbbox[4]:(vbbox[5] + 1)]
+                    self.count_all_labels(volume, ncomponents, count)
+                    if self.one_label_present(count, label_number):
+                        vbbox[2] -= nvoxel
+                    else:
+                        growth_xyz[2] = False
+                    del count
+                else:
+                    growth_xyz[2] = False
+
+        # increse in y positive direction
+        def three():
+            if growth_xyz[3]:
+                if (vbbox[3] + nvoxel) < higest_idx_y:
+                    count = np.zeros((ncomponents + 1), dtype=np.int)
+                    volume = labeled[vbbox[0]:(vbbox[1] + 1), vbbox[2]:(vbbox[3] + nvoxel + 1), vbbox[4]:(vbbox[5] + 1)]
+                    self.count_all_labels(volume, ncomponents, count)
+                    if self.one_label_present(count, label_number):
+                        vbbox[3] += nvoxel
+                    else:
+                        growth_xyz[3] = False
+                    del count
+                else:
+                    growth_xyz[3] = False
+
+
+        # increse in z negative direction
+        def four():
+            if growth_xyz[4]:
+                if lowest_idx_z <= (vbbox[4] - nvoxel):
+                    count = np.zeros((ncomponents + 1), dtype=np.int)
+                    volume = labeled[vbbox[0]:(vbbox[1] + 1), vbbox[2]:(vbbox[3] + 1), (vbbox[4] - nvoxel):(vbbox[5] + 1)]
+                    self.count_all_labels(volume, ncomponents, count)
+                    if self.one_label_present(count, label_number):
+                        vbbox[4] -= nvoxel
+                    else:
+                        growth_xyz[4] = False
+                    del count
+                else:
+                    growth_xyz[4] = False
+
+        # increse in z positive direction
+        def five():
+            if growth_xyz[5]:
+                if (vbbox[5] + nvoxel) < higest_idx_z:
+                    count = np.zeros((ncomponents + 1), dtype=np.int)
+                    volume = labeled[vbbox[0]:(vbbox[1] + 1), vbbox[2]:(vbbox[3] + 1), vbbox[4]:(vbbox[5] + nvoxel + 1)]
+                    self.count_all_labels(volume, ncomponents, count)
+                    if self.one_label_present(count, label_number):
+                        vbbox[5] += nvoxel
+                    else:
+                        growth_xyz[5] = False
+                    del count
+                else:
+                    growth_xyz[5] = False
+
+
+    #                                                                                                   #
+    #       End of the five function definition                                                         #
+    #                                                                                                   #
+    #####################################################################################################
+
+
+
+        vbbox = initial_vbbox
 
         lowest_idx_x = 0
         higest_idx_x = labeled.shape[0]
@@ -169,165 +332,101 @@ class UniformExpandVBBox(ExpandVBBox):
         lowest_idx_z = 0
         higest_idx_z = labeled.shape[2]
 
-        # increse in x negative direction
-        if growth_xyz[0]:
-            if lowest_idx_x <= (bbox[0]-nvoxel):
-                count = np.zeros((ncomponents+1), dtype=np.int)
-                volume = labeled[bbox[0]-nvoxel:(bbox[1]+1), bbox[2]:(bbox[3]+1), bbox[4]:(bbox[5]+1)]
-                self.count_all_labels(volume, ncomponents, count)
-                if self.check_only_one_label(count, label_number):
-                    bbox[0] = bbox[0] - nvoxel
-                else:
-                    growth_xyz[0] = False
-                del count
-            else:
-                growth_xyz[0] = False
+        # Defining a dictionary with function to expand the vbbox.
+        fc_dict = {0:zero, 1:one, 2:two, 3:three, 4:four, 5:five}
 
-        # increse in x positive direction
-        if growth_xyz[1]:
-            if (bbox[1] + nvoxel) < higest_idx_x:
-                count = np.zeros((ncomponents + 1), dtype=np.int)
-                volume = labeled[bbox[0]:(bbox[1] + nvoxel + 1), bbox[2]:(bbox[3] + 1), bbox[4]:(bbox[5] + 1)]
-                self.count_all_labels(volume, ncomponents, count)
-                if self.check_only_one_label(count, label_number):
-                    bbox[1] = bbox[1] + nvoxel
-                else:
-                    growth_xyz = False
-                del count
-            else:
-                growth_xyz[1] = False
+        stop = False
+        idx = 0
+        while idx < (len(growth_xyz)-1) and (not stop):
+            myfunc = fc_dict[idx]
+            myfunc()
 
-        # increse in y negative direction
-        if growth_xyz[2]:
-            if lowest_idx_y <= (bbox[2] - nvoxel):
-                count = np.zeros((ncomponents + 1), dtype=np.int)
-                volume = labeled[bbox[0]:(bbox[1] + 1), (bbox[2] - nvoxel):(bbox[3] + 1), bbox[4]:(bbox[5] + 1)]
-                self.count_all_labels(volume, ncomponents, count)
-                if self.check_only_one_label(count, label_number):
-                    bbox[2] = bbox[2] - nvoxel
-                else:
-                    growth_xyz = False
-                del count
-            else:
-                growth_xyz[2] = False
+            if self.check_bg_percentage:
+                bg_p, _ = self.get_percentage(labeled, vbbox, ncomponents, label_number)
+                if bg_p > self.background_percentage:
+                    growth_xyz[0:] = False
+                    stop = True
 
-        # increse in y positive direction
-        if growth_xyz[3]:
-            if (bbox[3] + nvoxel) < higest_idx_y:
-                count = np.zeros((ncomponents + 1), dtype=np.int)
-                volume = labeled[bbox[0]:(bbox[1] + 1), bbox[2]:(bbox[3] + nvoxel + 1), bbox[4]:(bbox[5] + 1)]
-                self.count_all_labels(volume, ncomponents, count)
-                if self.check_only_one_label(count, label_number):
-                    bbox[3] = bbox[3] + nvoxel
-                else:
-                    growth_xyz = False
-                del count
-            else:
-                growth_xyz[3] = False
+            idx += 1
+
+        return vbbox
 
 
-        # increse in z negative direction
-        if growth_xyz[4]:
-            if lowest_idx_z <= (bbox[4] - nvoxel):
-                count = np.zeros((ncomponents + 1), dtype=np.int)
-                volume = labeled[bbox[0]:(bbox[1] + 1), bbox[2]:(bbox[3] + 1), (bbox[4] - nvoxel):(bbox[5] + 1)]
-                self.count_all_labels(volume, ncomponents, count)
-                if self.check_only_one_label(count, label_number):
-                    bbox[4] = bbox[4] - nvoxel
-                else:
-                    growth_xyz = False
-                del count
-            else:
-                growth_xyz[4] = False
+    def expand(self, labeled, minimal_vbbox, ncomponents, label_number):
 
-        # increse in z positive direction
-        if growth_xyz[5]:
-            if (bbox[5] + nvoxel) < higest_idx_z:
-                count = np.zeros((ncomponents + 1), dtype=np.int)
-                volume = labeled[bbox[0]:(bbox[1] + 1), bbox[2]:(bbox[3] + 1), bbox[4]:(bbox[5] + nvoxel + 1)]
-                self.count_all_labels(volume, ncomponents, count)
-                if self.check_only_one_label(count, label_number):
-                    bbox[5] = bbox[5] + nvoxel
-                else:
-                    growth_xyz = False
-                del count
-            else:
-                growth_xyz[5] = False
+        bg_p, _ = self.get_percentage(labeled, minimal_vbbox, ncomponents, label_number)
+        tmp_vbbox = minimal_vbbox
 
-        return bbox
+        if bg_p < self.background_percentage:  # if it's necessary to expand the vbbox.
+            stop = False
+            # growth_xyz represents the directions to growth: [x-, x+, y-, y+, z-, z+]
+            growth_xyz = np.array([True, True, True, True, True, True], dtype=np.bool)
+
+            while not stop:
+                print("    tmp_vbbox (xmin, xmax, ymin, ymax, zmin, zmax) = ({})".format(tmp_vbbox))
+                tmp_vbbox = self.uniform_expansion(labeled, tmp_vbbox, label_number, ncomponents, self.nvoxel, growth_xyz)
+                print("NEW tmp_vbbox (xmin, xmax, ymin, ymax, zmin, zmax) = ({})".format(tmp_vbbox))
+
+                bg_p, _ = self.get_percentage(labeled, tmp_vbbox, ncomponents, label_number)
+                if self.background_percentage <= bg_p or not np.any(growth_xyz):
+                    stop = True
+
+            del growth_xyz
+        else:
+            print("Already enough background!")
 
 
-    def bg_p_stuff(self, labeled, minimal_vbbox, ncomponents, label_number):
-        count = np.zeros((ncomponents + 1), dtype=np.int)
-        volume = labeled[minimal_vbbox[0]:minimal_vbbox[1] + 1, \
-                 minimal_vbbox[2]:minimal_vbbox[3] + 1, \
-                 minimal_vbbox[4]:minimal_vbbox[5] + 1]
-        self.count_all_labels(volume, ncomponents, count)
-        print("count = {}".format(count))
-        bg_p, gt_p = self.get_percentage(count, label_number)
-        print("lable_number : {}".format(label_number))
-        print("Initial minimum vbbox: bg_p = {:.2f}, gt_p = {:.2f}".format(round(bg_p, 2), round(gt_p, 2)))
-        del count
+        print("Expanded vbbox: {}".format(tmp_vbbox))
+        return tmp_vbbox
 
-        return bg_p, gt_p
+
+
+class SaveVBBoxNifty(Plugin):
+    def __init__(self, name, dst_image_path, dst_mask_path):
+        self.dst_image_path = dst_image_path
+        self.dst_mask_path = dst_mask_path
+        # self.image = None
+        # self.mask = None
+        super().__init__(name)
 
     def process(self, config, data):
-        print("UniformExpandVBBox plugin...")
+        print("SaveVBBox plugin...")
 
-        # if already exist an item, then remove it.
-        if data.get('CT_mask_expanded') is not None:
-            data.pop('CT_mask_expanded')
-            print("Removeing to data: 'CT_mask_expanded':expanded_vbbox_list")
+        # This plugin does not add any item to 'data', thus it is not necessary to
+        # check or remove anything from this plugin in the data dictionary.
 
-        if ('CT_mask_labeled' in data) and ('CT_mask_vbbox' in data):
-            print("CT_mask_labeled and CT_mask_vbbox are present keys in the data dictionary")
+        if ('CT' in data) and ('CT_mask_expanded' in data):
+            print("CT and CT_mask_expanded are present keys in the data dictionary")
 
-            labeled, ncomponents = data['CT_mask_labeled']
-            vbbox_list = data['CT_mask_vbbox']
+            image, mask = data['CT']
+            vbbox_list = data['CT_mask_expanded']
 
-            for label_number, minimal_vbbox in enumerate(vbbox_list):
-                if label_number != 0:
+            # check image and mask must be object from MyNifty class.
 
-                    bg_p, _ = self.bg_p_stuff(labeled, minimal_vbbox, ncomponents, label_number)
+            for label_number, vbbox in enumerate(vbbox_list):
+                if label_number != 0:       # skipping the background, which has a label = 0.
 
-                    if bg_p < self.backgroun_percentage:   # if it's necessary to expand the vbbox.
-                        stop = False
-                        # growth_xyz represents the directions to growth: [x-, x+, y-, y+, z-, z+]
-                        growth_xyz = np.array([True, True, True, True, True, True], dtype=np.bool)
-                        tmp_vbbox = minimal_vbbox
+                    # Mask
+                    expanded_mask = MyNifty()
+                    expanded_mask.volume = np.copy(mask.volume[vbbox[0]:vbbox[1]+1, \
+                                                               vbbox[2]:vbbox[3]+1, \
+                                                               vbbox[4]:vbbox[5]+1])
+                    expanded_mask.array2image()
+                    expanded_mask.set_properties(properties=mask.get_properties())
+                    # Get the names for the image and mask
+                    image_fname, mask_fname = get_dst_filename_nifty(mask.filename, label_number)
+                    expanded_mask.save(self.dst_mask_path, mask_fname)
 
-                        while not stop:
-                            print("    tmp_vbbox (xmin, xmax, ymin, ymax, zmin, zmax) = ({})".format(tmp_vbbox))
-                            tmp_vbbox = self.expand(labeled, tmp_vbbox, label_number, ncomponents, self.nvoxel, growth_xyz)
-                            print("NEW tmp_vbbox (xmin, xmax, ymin, ymax, zmin, zmax) = ({})".format(tmp_vbbox))
-
-                            bg_p, _ = self.bg_p_stuff(labeled, tmp_vbbox, ncomponents, label_number)
-                            if self.backgroun_percentage <= bg_p or not np.any(growth_xyz):
-                                self.expanded_vbbox_list.append(tmp_vbbox)
-                                stop = True
-                                print("Expanded vbbox: {}".format(tmp_vbbox))
-
-                            # del count
-
-                        del growth_xyz
-                    else:
-                        print("Already enough background!")
-                else:
-                    # We artificially add as first item a None, which corresponds to the background.
-                    # This let us to have label '1' in the index 1, label '2' in the index 2, and so on.
-                    self.expanded_vbbox_list.append(None)
-
-            # Add the new item to data
-            data['CT_mask_expanded'] = self.expanded_vbbox_list
-            print("Adding to data: 'CT_mask_expanded':expanded_vbbox_list")
+                    # Image
+                    expanded_image = MyNifty()
+                    expanded_image.volume = np.copy(image.volume[vbbox[0]:vbbox[1]+1, \
+                                                                 vbbox[2]:vbbox[3]+1, \
+                                                                 vbbox[4]:vbbox[5]+1])
+                    expanded_image.array2image()
+                    expanded_image.set_properties(properties=image.get_properties())
+                    expanded_image.save(self.dst_image_path, image_fname)
 
 
-
-
-def test():
-    u = UniformExpandVBBox('uniform')
-    u.expand()
-    u.process(None, None)
 
 
 
@@ -361,8 +460,14 @@ def debug_test():
     volumeBBox =  VolumeBBox('volumeBBox')
     volumeBBox.process(config, data)
 
-    uexpandVBBox = UniformExpandVBBox('uniformExpandVBBox', 50.0, 50.0, 1)
-    uexpandVBBox.process(config, data)
+    # Plugin UniformExpandVBBox
+    uniformExpansionVBBox = UniformExpansion('uniform', config.background_p, config.groundtruth_p, config.nvoxels, config.check_bg_percentage)
+    expandVBBox = ExpandVBBox('expand_vbbox', uniformExpansionVBBox)
+    expandVBBox.process(config, data)
+
+    # Plugin SaveVBBoxNifty
+    saveVBBoxNifty = SaveVBBoxNifty('SaveVBBoxNifty', config.dst_image_path, config.dst_mask_path)
+    saveVBBoxNifty.process(config, data)
 
 
 if __name__ == '__main__':

@@ -27,14 +27,14 @@ class NiftyManagement(Plugin):
 
     def masks2read(self):
         self.src_mask_list = [os.path.basename(x) for x in sorted(glob.glob(os.path.join(self.src_mask_path, self.mask_pattern)))]
-        self.index = 0    # index to be used with the self.src_mask_list list.
+        self.index = 0    # index to be used with the self.src_mask_list list to read all the masks.
         return True
 
     def get_mask_length(self):
         return len(self.src_mask_list)
 
-    # LIDC-IDRI-0001_GT1.nii.gz    LIDC-IDRI-0001_GT1_Mask.nii.gz
-
+    # Image filename: LIDC-IDRI-0001_GT1.nii.gz
+    # Mask filename:  LIDC-IDRI-0001_GT1_Mask.nii.gz
     def get_image_filename(self, mask_filename):
 
         if self.mask_pattern == '*.nii.gz':
@@ -66,14 +66,14 @@ class NiftyManagement(Plugin):
             self.mask = MyNifty()
             mask_filename = self.src_mask_list[self.index]
             self.mask.read(self.src_mask_path, mask_filename)
-            self.mask.record_properties()
             self.mask.image2array()
 
             self.image = MyNifty()
             image_filename = self.get_image_filename(mask_filename)
             self.image.read(self.src_image_path, image_filename)
-            self.image.record_properties()
             self.image.image2array()
+
+            assert self.image.volume.shape == self.mask.volume.shape, "In NiftyManagement, the volume shapes of the image and mask must have the same dimension."
 
             data['CT'] = [self.image, self.mask]     # add item
             print("Adding to data: 'CT':[image, mask]")
