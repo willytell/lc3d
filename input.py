@@ -59,7 +59,7 @@ class NiftyManagement(Plugin):
         print("NiftyManagement plugin...")
 
         if data.get('CT') is not None:  # if already exist
-            data.pop(self.name)  # remove item
+            data.pop('CT')  # remove item
             print("Removing to data: 'CT':[image, mask]")
 
         if self.index < len(self.src_mask_list):
@@ -79,9 +79,11 @@ class NiftyManagement(Plugin):
             print("Adding to data: 'CT':[image, mask]")
 
             self.index += 1  # increment the index for the next item.
+            return True
 
         else:
-            print("Error: In NiftyManagement class, process method: list index out of range.")
+            print("All the masks and images have been processed.")
+            return False
 
 
 

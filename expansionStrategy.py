@@ -27,7 +27,7 @@ class UniformExpansion(ExpansionStrategy):
             count[l] = len(np.where(volume == l)[0])
 
     def one_label_present(self, count, label_number):
-        assert label_number != 0, "UniformExpand, one_label does not verify one label for background."
+        assert label_number != 0, "UniformExpansion, one_label_present does not verify the background label."
         if count[label_number] == count[1:].sum():  # background is discarded
             #print("The label {} is the only one present in the volume.".format(label_number))
             return True

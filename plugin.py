@@ -50,9 +50,12 @@ class Labeling(Plugin):
             # Add the new item to data
             data['CT_mask_labeled'] = [self.labeled, self.ncomponents]
             print("Adding to data: 'CT_mask_labeled':[labeled, ncomponents]")
+            return True
 
         else:
             print('Error: In the Labeling class, process() method do not found CT key to process.')
+
+        return False
 
 
 
@@ -112,9 +115,12 @@ class VolumeBBox(Plugin):
                 # Add the new item to data
                 data['CT_mask_vbbox'] = self.vbbox_list
                 print("Adding to data: 'CT_mask_vbbox':vbbox_list")
+                return True
 
         else:
             print('Error: In the VolumeBBox class, process() method do not found CT_mask_labeled key to process.')
+
+        return False
 
 
 
@@ -135,6 +141,8 @@ class ExpandVBBox(Plugin):
         if data.get('CT_mask_expanded') is not None:
             data.pop('CT_mask_expanded')
             print("Removeing to data: 'CT_mask_expanded':expanded_vbbox_list")
+
+        self.expanded_vbbox_list = []
 
         # Get some items from data dictionary
         if ('CT_mask_labeled' in data) and ('CT_mask_vbbox' in data):
@@ -158,6 +166,11 @@ class ExpandVBBox(Plugin):
             # Add the new item to data
             data['CT_mask_expanded'] = self.expanded_vbbox_list
             print("Adding to data: 'CT_mask_expanded':expanded_vbbox_list")
+            return True
+        else:
+            print("Error: In ExpandVBBox class, process() method do not found CT_mask_labeled and CT_mask_vbbox keys to process.")
+
+        return False
 
 
 class SaveVBBoxNifty(Plugin):
@@ -204,6 +217,14 @@ class SaveVBBoxNifty(Plugin):
                     expanded_image.array2image()
                     expanded_image.set_properties(properties=image.get_properties())
                     expanded_image.save(self.dst_image_path, image_fname)
+
+            return True
+
+        else:
+            print("Error: In SaveVBBoxNifty class, process() method do not found CT and CT_mask_expanded keys to process.")
+
+        return False
+
 
 
 
