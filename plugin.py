@@ -7,6 +7,7 @@ from abc import ABC, abstractmethod
 from scipy.ndimage.measurements import label
 from imageFormat import MyNifty
 from utils import get_dst_filename_nifty
+from slidingwindow import SlidingWindow
 
 class Plugin(ABC):
     def __init__(self, name):
@@ -222,6 +223,43 @@ class SaveVBBoxNifty(Plugin):
 
         else:
             print("Error: In SaveVBBoxNifty class, process() method do not found CT and CT_mask_expanded keys to process.")
+
+        return False
+
+
+class SlidingWindowPlugin(Plugin):
+    def __init__(self,name, slidingWindow):
+        self.slidingWindow = slidingWindow   # <--- do it inside the processingX
+        self.image = None
+        super().__init__(name)
+
+
+    def process(self, config, data):
+        print("SlidingWindow plugin...")
+
+        if 'CT' in data:
+            print("CT is a present key in the data dictionary")
+            self.image, _ = data['CT']
+
+            # adding Pad to the volume
+            self.image.volume = self.slidingWindow.padding(self.image.volume)
+
+            # create a mask with the size of the window size with all in 1's <--- do it inside the processingX
+
+            # Converting from numpy to simpleITK.
+            self.image.array2image()    # volumen in numpy is converted to image in simpleITK to be used by pyradiomic
+
+            # extract features using
+            # pyradiomic.extract_features()
+
+
+
+            print("Labeling labeled ncomponents: {}".format(self.ncomponents))
+
+            return True
+
+        else:
+            print('Error: In the Labeling class, process() method do not found CT key to process.')
 
         return False
 

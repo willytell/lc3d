@@ -27,11 +27,11 @@ class Processing(ABC):
         idx = 0
         continueProcessing = True
 
-        while idx < len(self.plugin_stack) and continueProcessing:
+        while idx != len(self.plugin_stack) and continueProcessing:
             plugin = self.plugin_stack[idx]
             start_time = time.process_time()  # process_time does not include time elapsed during sleep.
             continueProcessing = plugin.process(self.config, self.data)
-            elapsed_time = time.process_time() - start_time  # measure in seconds
+            elapsed_time = time.process_time() - start_time  # it measures in seconds
             #elapsed_time *= 1000  # to milliseconds
             if self.show_plugin_time:
                 print("Elapsed time for the plugin '{}': {:.2f} seconds.".format(plugin.name, elapsed_time))
@@ -87,7 +87,7 @@ class VBBoxPerNoduleProcessing(Processing):
         continueProcessing = True
 
         while continueProcessing:
-            continueProcessing = super().execute_stack()
+            continueProcessing = super()
             print("--------------------------------------------------------------------")
 
 

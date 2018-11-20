@@ -1,5 +1,4 @@
 
-
 # Input: dimension = '(3,3,3)'
 # Output: 3, 3, 3
 def get_components(dimension):
@@ -16,4 +15,3 @@ def get_dst_filename_nifty(filename, label):
     mask_filename = name_splitted[0] + '_' + name_splitted[1] + '_' + str(label) + '_' + name_splitted[2] + '.nii.gz'
     image_filename = name_splitted[0] + '_' + name_splitted[1] + '_' + str(label) + '.nii.gz'
     return image_filename, mask_filename
-
