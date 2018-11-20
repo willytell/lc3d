@@ -54,7 +54,7 @@ class Labeling(Plugin):
             return True
 
         else:
-            print('Error: In the Labeling class, process() method do not found CT key to process.')
+            print('Error: In the Labeling, process() method does not found CT key to process.')
 
         return False
 
@@ -119,7 +119,7 @@ class VolumeBBox(Plugin):
                 return True
 
         else:
-            print('Error: In the VolumeBBox class, process() method do not found CT_mask_labeled key to process.')
+            print('Error: In the VolumeBBox, process() method does not found CT_mask_labeled key to process.')
 
         return False
 
@@ -169,7 +169,7 @@ class ExpandVBBox(Plugin):
             print("Adding to data: 'CT_mask_expanded':expanded_vbbox_list")
             return True
         else:
-            print("Error: In ExpandVBBox class, process() method do not found CT_mask_labeled and CT_mask_vbbox keys to process.")
+            print("Error: In ExpandVBBox, process() method does not found CT_mask_labeled and CT_mask_vbbox keys to process.")
 
         return False
 
@@ -222,48 +222,46 @@ class SaveVBBoxNifty(Plugin):
             return True
 
         else:
-            print("Error: In SaveVBBoxNifty class, process() method do not found CT and CT_mask_expanded keys to process.")
+            print("Error: In SaveVBBoxNifty, process() method does not found CT and CT_mask_expanded keys to process.")
 
         return False
 
 
 class SlidingWindowPlugin(Plugin):
-    def __init__(self,name, slidingWindow):
+    def __init__(self,name, slidingWindow, strategy):
         self.slidingWindow = slidingWindow   # <--- do it inside the processingX
+        self.strategy = strategy
         self.image = None
         super().__init__(name)
 
+        # create a mask with the size of the window size with all in 1's <--- do it inside the processingX
+
+    def context_interface(self, array):
+        self.strategy.featureExtraction(array)
 
     def process(self, config, data):
         print("SlidingWindow plugin...")
 
         if 'CT' in data:
             print("CT is a present key in the data dictionary")
-            self.image, _ = data['CT']
+            self.image, _ = data['CT']  # remember that self.image is a MyNifty object.
 
             # adding Pad to the volume
             self.image.volume = self.slidingWindow.padding(self.image.volume)
 
-            # create a mask with the size of the window size with all in 1's <--- do it inside the processingX
+            # mini_cubes will contains all the volumes generated after slide the window throughout the volume.
+            # By the way, mini_cubes is an numpy object.
+            mini_cubes = self.slidingWindow.rolling_window(self.image.volume)
 
-            # Converting from numpy to simpleITK.
-            self.image.array2image()    # volumen in numpy is converted to image in simpleITK to be used by pyradiomic
-
-            # extract features using
-            # pyradiomic.extract_features()
-
-
-
-            print("Labeling labeled ncomponents: {}".format(self.ncomponents))
+            # extract features and save them.
+            self.strategy.featureExtraction(mini_cubes)
 
             return True
 
         else:
-            print('Error: In the Labeling class, process() method do not found CT key to process.')
+            print('Error: In the SlidingWindowPlugin, process() method does not found CT key to process.')
 
         return False
-
-
 
 
 
@@ -278,11 +276,11 @@ def debug_test():
     data = {}
 
     # Plugin NiftyManagement
-    myNiftyHandler = NiftyManagement('myNiftyHandler', \
-                                     config.src_image_path, \
-                                     config.src_mask_path, \
-                                     config.mask_pattern, \
-                                     config.dst_image_path, \
+    myNiftyHandler = NiftyManagement('myNiftyHandler',
+                                     config.src_image_path,
+                                     config.src_mask_path,
+                                     config.mask_pattern,
+                                     config.dst_image_path,
                                      config.dst_mask_path)
     myNiftyHandler.masks2read()
     myNiftyHandler.process(config, data)
