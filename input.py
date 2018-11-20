@@ -73,7 +73,7 @@ class NiftyManagement(Plugin):
             self.image.read(self.src_image_path, image_filename)
             self.image.image2array()
 
-            assert self.image.volume.shape == self.mask.volume.shape, "In NiftyManagement, the volume shapes of the image and mask must have the same dimension."
+            assert self.image.volume.shape == self.mask.volume.shape, "In NiftyManagement, it is supposed that image's volume and mask's volume should have the same shape."
 
             data['CT'] = [self.image, self.mask]     # add item
             print("Adding to data: 'CT':[image, mask]")

@@ -105,7 +105,7 @@ class FeatureExtractionStrategy(ABC):
         super().__init__()
 
     @abstractmethod
-    def extract(self, array):
+    def featureExtraction(self, array):
         pass
 
 
@@ -115,9 +115,9 @@ class MyRadiomic(FeatureExtractionStrategy):
         self.extractor = None
         super().__init__(name)
 
-    def build_mask_trick(self, dim):
+    def build_mask_trick(self, window_size):
         # build a 3D mask with all in 1's, then it is converted to SimpleITK.
-        mask = np.ones((dim, dim, dim), dtype=np.int)
+        mask = np.ones((window_size, window_size, window_size), dtype=np.int)
         self.maskITK = sitk.GetImageFromArray(mask)
 
     def build_extractor(self, paramPath):
@@ -133,7 +133,7 @@ class MyRadiomic(FeatureExtractionStrategy):
     def featureExtraction(self, array):
         print("Using Radiomic to extract features...")
 
-        assert type(array).__module__ == np.__name__, "Error, expected an numpy object."
+        assert type(array).__module__ == np.__name__, "Error, expected a numpy object."
         assert array.ndim == 6, "Error, the array's dimension must be equal to 6."
 
         max_i, max_j, max_k = array.shape[:3]
@@ -164,7 +164,7 @@ def debug_test():
     print(rw.shape)
 
     mr = MyRadiomic('myRadiomic')
-    mr.build_mask_trick(dim=3)
+    mr.build_mask_trick(window_size=3)
     mr.build_extractor(paramPath='/home/willytell/Documentos/PhD/pyradiomics/examples/exampleSettings/Params.yaml')
     mr.featureExtraction(rw)
 

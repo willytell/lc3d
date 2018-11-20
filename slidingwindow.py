@@ -2,9 +2,17 @@ import numpy as np
 
 class SlidingWindow():
 
-    def __init__(self, window_size, mode='edge'):
-        self.window_size = window_size
-        self.mode = mode
+    def __init__(self, window_size, mode='edge', window=(0,), asteps=None, wsteps=None, axes=None, toend=True):
+        self.window_size = window_size   # with a window_size of 3, it indicates a 3x3x3 window.
+        self.mode = mode  # determine the mode to pad
+
+        #parameters used in rolling_window()
+        self.window = window
+        self.asteps = asteps
+        self.wsteps = wsteps
+        self.axes = axes
+        self.toend = toend
+
 
     def get_slices_to_add(self, window_size):
         """
@@ -41,8 +49,15 @@ class SlidingWindow():
         return np.pad(volume, slices * to_add, self.mode)
 
 
-    def rolling_window(self, array, window=(0,), asteps=None, wsteps=None, axes=None, toend=True):
-        """Create a view of `array` which for every point gives the n-dimensional
+    def rolling_window(self, array):
+        self.real_rolling_window(array, self.window, self.asteps, self.wsteps, self.axes, self.toend)
+
+
+    def real_rolling_window(self, array, window = (0,), asteps = None, wsteps = None, axes = None, toend = True):
+        """
+        All the credits for this function to Sebastian Berg, https://gist.github.com/seberg/3430219
+
+        Create a view of `array` which for every point gives the n-dimensional
         neighbourhood of size window. New dimensions are added at the end of
         `array` or after the corresponding original dimension.
 
@@ -50,21 +65,21 @@ class SlidingWindow():
         ----------
         array : array_like
             Array to which the rolling window is applied.
-        window : int or tuple
+        self.window : int or tuple
             Either a single integer to create a window of only the last axis or a
             tuple to create it for the last len(window) axes. 0 can be used as a
             to ignore a dimension in the window.
-        asteps : tuple
+        self.asteps : tuple
             Aligned at the last axis, new steps for the original array, ie. for
             creation of non-overlapping windows. (Equivalent to slicing result)
-        wsteps : int or tuple (same size as window)
+        self.wsteps : int or tuple (same size as window)
             steps for the added window dimensions. These can be 0 to repeat values
             along the axis.
-        axes: int or tuple
+        self.axes: int or tuple
             If given, must have the same size as window. In this case window is
             interpreted as the size in the dimension given by axes. IE. a window
             of (2, 1) is equivalent to window=2 and axis=-2.
-        toend : bool
+        self.toend : bool
             If False, the new dimensions are right after the corresponding original
             dimension, instead of at the end of the array. Adding the new axes at the
             end makes it easier to get the neighborhood, however toend=False will give
@@ -115,6 +130,7 @@ class SlidingWindow():
                [4, 6, 8],
                [5, 7, 9]])
         """
+
         array = np.asarray(array)
         orig_shape = np.asarray(array.shape)
         window = np.atleast_1d(window).astype(int)  # maybe crude to cast to int...

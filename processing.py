@@ -3,8 +3,10 @@ import time
 from abc import ABC, abstractmethod
 from input import NiftyManagement
 from utils import get_components
-from plugin import Labeling, VolumeBBox, ExpandVBBox, SaveVBBoxNifty
+from plugin import Labeling, VolumeBBox, ExpandVBBox, SaveVBBoxNifty, SlidingWindowPlugin
 from expansionStrategy import UniformExpansion
+from slidingwindow import SlidingWindow
+from featureExtractionStrategy import MyRadiomic
 
 
 class Processing(ABC):
@@ -50,24 +52,24 @@ class VBBoxPerNoduleProcessing(Processing):
 
     def build_stack(self):
         # Plugin NiftyManagement
-        myNiftyManagement = NiftyManagement('myNiftyHandler', self.config.src_image_path, self.config.src_mask_path,
+        myNiftyManagement = NiftyManagement('NiftyManagement', self.config.src_image_path, self.config.src_mask_path,
                         self.config.mask_pattern, self.config.dst_image_path, self.config.dst_mask_path)
         myNiftyManagement.masks2read()
         self.plugin_stack.append(myNiftyManagement)
 
         # Plugin Labeling
-        myLabeling = Labeling('myLabeling')
+        myLabeling = Labeling('Labeling')
         dim_x, dim_y, dim_z = get_components(self.config.labeling_se_dim)
         myLabeling.set_structure_element(dim_x, dim_y, dim_z)
         self.plugin_stack.append(myLabeling)
 
         # Plugin VolumeBBox
-        myVolumeBBox = VolumeBBox('myVolumeBBox')
+        myVolumeBBox = VolumeBBox('VolumeBBox')
         self.plugin_stack.append(myVolumeBBox)
 
         # Plugin UniformExpandVBBox
         if self.config.expanionStrategy == 'uniform':
-            expanionStrategy = UniformExpansion('uniform', self.config.background_p, self.config.groundtruth_p, self.config.nvoxels,
+            expanionStrategy = UniformExpansion('Uniform', self.config.background_p, self.config.groundtruth_p, self.config.nvoxels,
                                                    self.config.check_bg_percentage)
         # elif self.config.expanionStrategy == 'other_option':
         #     expanionStrategy = other_option()
@@ -75,11 +77,11 @@ class VBBoxPerNoduleProcessing(Processing):
             print("Error, config.expanionStrategy does not match any option")
             sys.exit()
 
-        myExpandVBBox = ExpandVBBox('myExpandVBBox', expanionStrategy)
+        myExpandVBBox = ExpandVBBox('ExpandVBBox', expanionStrategy)
         self.plugin_stack.append(myExpandVBBox)
 
         # Plugin SaveVBBoxNifty
-        mySaveVBBoxNifty = SaveVBBoxNifty('mySaveVBBoxNifty', self.config.dst_image_path, self.config.dst_mask_path)
+        mySaveVBBoxNifty = SaveVBBoxNifty('SaveVBBoxNifty', self.config.dst_image_path, self.config.dst_mask_path)
         self.plugin_stack.append(mySaveVBBoxNifty)
 
     def run(self):
@@ -87,19 +89,65 @@ class VBBoxPerNoduleProcessing(Processing):
         continueProcessing = True
 
         while continueProcessing:
-            continueProcessing = super()
+            continueProcessing = super().execute_stack()
+            print("--------------------------------------------------------------------")
+
+
+class FeatureExtractionProcessing(Processing):
+    def __init__(self, name, config):
+        super().__init__(name, config)
+
+    def build_stack(self):
+        # Plugin NiftyManagement
+        myNiftyManagement = NiftyManagement('NiftyManagement', self.config.src_image_path, self.config.src_mask_path,
+                        self.config.mask_pattern, self.config.dst_image_path, self.config.dst_mask_path)
+        myNiftyManagement.masks2read()
+        self.plugin_stack.append(myNiftyManagement)
+
+        # Plugin SlidingWindowPlugin
+        winSize = self.config.window_size
+        mySlidingWindow = SlidingWindow(window_size=winSize, mode=self.config.mode,
+                                        window=(winSize, winSize, winSize),
+                                        asteps=(self.config.deltaZ, self.config.deltaX, self.config.deltaY), # asteps = (z,x,y)
+                                        wsteps=None,
+                                        axes=None,
+                                        toend=True)
+
+        myRadiomic = MyRadiomic('MyRadiomic')
+        myRadiomic.build_mask_trick(self.config.window_size)
+        myRadiomic.build_extractor(self.config.radiomicConfigFile)
+        mySlidingWindowPlugin = SlidingWindowPlugin('SlidingWindow',
+                                                    slidingWindow=mySlidingWindow,
+                                                    strategy=myRadiomic)
+        self.plugin_stack.append(mySlidingWindowPlugin)
+
+    def run(self):
+        print("Running FeatureExtractionProcessing...")
+        continueProcessing = True
+
+        while continueProcessing:
+            continueProcessing = super().execute_stack()
             print("--------------------------------------------------------------------")
 
 
 
+# def debug_test():
+#     from configuration import Configuration
+#
+#     config = Configuration("config/conf_vbboxPerNodule.py", "extract features").load()
+#
+#     myVBBoxPerNoduleProcessing = VBBoxPerNoduleProcessing('VBBoxPerNoduleProcessing', config)
+#     myVBBoxPerNoduleProcessing.build_stack()
+#     myVBBoxPerNoduleProcessing.run()
+
 def debug_test():
     from configuration import Configuration
 
-    config = Configuration("config/conf_extractfeatures.py", "extract features").load()
+    config = Configuration("config/conf_featureExtraction.py", "extract features").load()
 
-    myVBBoxPerNoduleProcessing = VBBoxPerNoduleProcessing('myVBBoxPerNoduleProcessing', config)
-    myVBBoxPerNoduleProcessing.build_stack()
-    myVBBoxPerNoduleProcessing.run()
+    myFeatureExtractionProcessing = FeatureExtractionProcessing('FeatureExtractionProcessing', config)
+    myFeatureExtractionProcessing.build_stack()
+    myFeatureExtractionProcessing.run()
 
 
 if __name__ == '__main__':

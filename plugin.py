@@ -249,12 +249,12 @@ class SlidingWindowPlugin(Plugin):
             # adding Pad to the volume
             self.image.volume = self.slidingWindow.padding(self.image.volume)
 
-            # mini_cubes will contains all the volumes generated after slide the window throughout the volume.
-            # By the way, mini_cubes is an numpy object.
-            mini_cubes = self.slidingWindow.rolling_window(self.image.volume)
+            # little_cubes will contains all the volumes generated after slide the window throughout the volume.
+            # By the way, little_cubes is an numpy object.
+            little_cubes = self.slidingWindow.rolling_window(self.image.volume)
 
             # extract features and save them.
-            self.strategy.featureExtraction(mini_cubes)
+            self.strategy.featureExtraction(little_cubes)
 
             return True
 
