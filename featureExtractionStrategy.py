@@ -143,13 +143,19 @@ class MyRadiomic(FeatureExtractionStrategy):
                 for k in range(max_k):
                     volume = array[i, j, k]
                     imageITK = sitk.GetImageFromArray(volume)
-                    result = self.extractor.execute(imageITK, self.maskITK)   # allways is used the same mask
+                    featureVector = self.extractor.execute(imageITK, self.maskITK)   # allways is used the same mask
                     print("-----------------------------------------")
-                    print('Result type:', type(result))  # result is returned in a Python ordered dictionary)
+                    print('Result type:', type(featureVector))  # result is returned in a Python ordered dictionary)
                     print('')
                     print('Calculated features')
-                    for key, value in six.iteritems(result):
-                        print('\t', key, ':', value)
+
+                    # Show output
+                    for featureName in featureVector.keys():
+                        #print('Computed %s: %s' % (featureName, featureVector[featureName]))
+                        print(featureVector[featureName])
+
+                    #for key, value in six.iteritems(featureVector):
+                    #    print('\t', key, ':', value)
 
 
 
