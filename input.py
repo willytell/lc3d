@@ -13,7 +13,7 @@ from configuration import Configuration
 #         super().__init__(name)
 
 class NiftyManagement(Plugin):
-    def __init__(self, name, src_image_path, src_mask_path, mask_pattern, dst_image_path, dst_mask_path):     #mask_pattern = '*.nii.gz'
+    def __init__(self, name, src_image_path, src_mask_path, mask_pattern, dst_image_path, dst_mask_path, internal=1):     #mask_pattern = '*.nii.gz'
         self.src_image_path = src_image_path
         self.src_mask_path = src_mask_path
         self.mask_pattern = mask_pattern
@@ -23,6 +23,7 @@ class NiftyManagement(Plugin):
         self.src_mask_list = []
         self.image = None
         self.mask = None
+        self.internal = internal
         super().__init__(name)
 
     def masks2read(self):
@@ -33,14 +34,27 @@ class NiftyManagement(Plugin):
     def get_mask_length(self):
         return len(self.src_mask_list)
 
-    # Image filename: LIDC-IDRI-0001_GT1.nii.gz
-    # Mask filename:  LIDC-IDRI-0001_GT1_Mask.nii.gz
+    # Depending on the self.internal value it will find the image's filename.
     def get_image_filename(self, mask_filename):
 
-        if self.mask_pattern == '*.nii.gz':
-            name_splitted = mask_filename.split('.')[0].split('_')
-            image_filename = name_splitted[0] + '_' + name_splitted[1] + '.nii.gz'
-            return image_filename
+        if self.internal == 1:  # image and mask to be processed for first time
+            # Image filename: LIDC-IDRI-0001_GT1.nii.gz
+            # Mask filename:  LIDC-IDRI-0001_GT1_Mask.nii.gz
+            if self.mask_pattern == '*.nii.gz':
+                name_splitted = mask_filename.split('.')[0].split('_')
+                image_filename = name_splitted[0] + '_' + name_splitted[1] + '.nii.gz'
+                return image_filename
+        elif self.internal == 2:  # for image and mask ready to extract features
+            # Image filename: LIDC-IDRI-0001_GT1_1.nii.gz
+            # Mask filename:  LIDC-IDRI-0001_GT1_1_Mask.nii.gz
+            if self.mask_pattern == '*.nii.gz':
+                name_splitted = mask_filename.split('.')[0].split('_')
+                image_filename = name_splitted[0] + '_' + name_splitted[1] + '_' + name_splitted[2] + '.nii.gz'
+                return image_filename
+        else:
+            print("Error, unknown 'internal' pattern of name.")
+            return None
+
 
     # def images2read(self):
     #     self.src_image_list = []

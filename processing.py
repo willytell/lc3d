@@ -53,7 +53,7 @@ class VBBoxPerNoduleProcessing(Processing):
     def build_stack(self):
         # Plugin NiftyManagement
         myNiftyManagement = NiftyManagement('NiftyManagement', self.config.src_image_path, self.config.src_mask_path,
-                        self.config.mask_pattern, self.config.dst_image_path, self.config.dst_mask_path)
+                        self.config.mask_pattern, self.config.dst_image_path, self.config.dst_mask_path, internal=1)
         myNiftyManagement.masks2read()
         self.plugin_stack.append(myNiftyManagement)
 
@@ -100,7 +100,7 @@ class FeatureExtractionProcessing(Processing):
     def build_stack(self):
         # Plugin NiftyManagement
         myNiftyManagement = NiftyManagement('NiftyManagement', self.config.src_image_path, self.config.src_mask_path,
-                        self.config.mask_pattern, self.config.dst_image_path, self.config.dst_mask_path)
+                        self.config.mask_pattern, self.config.dst_image_path, self.config.dst_mask_path, internal=2)
         myNiftyManagement.masks2read()
         self.plugin_stack.append(myNiftyManagement)
 

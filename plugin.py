@@ -229,12 +229,10 @@ class SaveVBBoxNifty(Plugin):
 
 class SlidingWindowPlugin(Plugin):
     def __init__(self,name, slidingWindow, strategy):
-        self.slidingWindow = slidingWindow   # <--- do it inside the processingX
+        self.slidingWindow = slidingWindow
         self.strategy = strategy
         self.image = None
         super().__init__(name)
-
-        # create a mask with the size of the window size with all in 1's <--- do it inside the processingX
 
     def context_interface(self, array):
         self.strategy.featureExtraction(array)
@@ -247,14 +245,17 @@ class SlidingWindowPlugin(Plugin):
             self.image, _ = data['CT']  # remember that self.image is a MyNifty object.
 
             # adding Pad to the volume
-            self.image.volume = self.slidingWindow.padding(self.image.volume)
+            newVolume = self.slidingWindow.padding(self.image.volume)
 
             # little_cubes will contains all the volumes generated after slide the window throughout the volume.
             # By the way, little_cubes is an numpy object.
-            little_cubes = self.slidingWindow.rolling_window(self.image.volume)
+            little_cubes = self.slidingWindow.rolling_window(newVolume)
 
-            # extract features and save them.
-            self.strategy.featureExtraction(little_cubes)
+            if little_cubes is not None:
+                # extract features and save them.
+                self.strategy.featureExtraction(little_cubes)
+            # if little_cube IS None, it's because the window to slide was larger than the volume, then there's
+            # nothing to do.
 
             return True
 

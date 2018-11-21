@@ -50,7 +50,9 @@ class SlidingWindow():
 
 
     def rolling_window(self, array):
-        self.real_rolling_window(array, self.window, self.asteps, self.wsteps, self.axes, self.toend)
+        # check if window * wsteps is smaller than 'array'.
+        result = self.real_rolling_window(array, self.window, self.asteps, self.wsteps, self.axes, self.toend)
+        return result
 
 
     def real_rolling_window(self, array, window = (0,), asteps = None, wsteps = None, axes = None, toend = True):
@@ -145,23 +147,35 @@ class SlidingWindow():
         # Check if window is legal:
         if window.ndim > 1:
             raise ValueError("`window` must be one-dimensional.")
+            #print("ValueError: `window` must be one-dimensional.")
+            #return None
         if np.any(window < 0):
             raise ValueError("All elements of `window` must be larger then 1.")
+            #print("ValueError: All elements of `window` must be larger then 1.")
+            #return None
         if len(array.shape) < len(window):
             raise ValueError("`window` length must be less or equal `array` dimension.")
+            #print("ValueError: `window` length must be less or equal `array` dimension.")
+            #return None
 
         _asteps = np.ones_like(orig_shape)
         if asteps is not None:
             asteps = np.atleast_1d(asteps)
             if asteps.ndim != 1:
                 raise ValueError("`asteps` must be either a scalar or one dimensional.")
+                #print("ValueError: `asteps` must be either a scalar or one dimensional.")
+                #return None
             if len(asteps) > array.ndim:
                 raise ValueError("`asteps` cannot be longer then the `array` dimension.")
+                #print("ValueError: `asteps` cannot be longer then the `array` dimension.")
+                #return None
             # does not enforce alignment, so that steps can be same as window too.
             _asteps[-len(asteps):] = asteps
 
             if np.any(asteps < 1):
                 raise ValueError("All elements of `asteps` must be larger then 1.")
+                #print("ValueError: All elements of `asteps` must be larger then 1.")
+                #return None
         asteps = _asteps
 
         _wsteps = np.ones_like(window)
@@ -169,8 +183,12 @@ class SlidingWindow():
             wsteps = np.atleast_1d(wsteps)
             if wsteps.shape != window.shape:
                 raise ValueError("`wsteps` must have the same shape as `window`.")
+                #print("ValueError: `wsteps` must have the same shape as `window`.")
+                #return None
             if np.any(wsteps < 0):
                 raise ValueError("All elements of `wsteps` must be larger then 0.")
+                #print("ValueError: All elements of `wsteps` must be larger then 0.")
+                #return None
 
             _wsteps[:] = wsteps
             _wsteps[window == 0] = 1  # make sure that steps are 1 for non-existing dims.
@@ -178,7 +196,9 @@ class SlidingWindow():
 
         # Check that the window would not be larger then the original:
         if np.any(orig_shape[-len(window):] < window * wsteps):
-            raise ValueError("`window` * `wsteps` larger then `array` in at least one dimension.")
+            #raise ValueError("`window` * `wsteps` larger then `array` in at least one dimension.")
+            print("ValueError: `window` * `wsteps` larger then `array` in at least one dimension.")
+            return None
 
         new_shape = orig_shape  # just renaming...
 
