@@ -4,7 +4,7 @@ import glob
 import os
 
 from plugin import Plugin
-from imageFormat import MyNifty
+from imageFormat import NiftyFormat
 
 from configuration import Configuration
 
@@ -12,7 +12,7 @@ from configuration import Configuration
 #     def __init__(self, name):
 #         super().__init__(name)
 
-class NiftyManagement(Plugin):
+class NiftyManagementPlugin(Plugin):
     def __init__(self, name, src_image_path, src_mask_path, mask_pattern, dst_image_path, dst_mask_path, internal=1):     #mask_pattern = '*.nii.gz'
         self.src_image_path = src_image_path
         self.src_mask_path = src_mask_path
@@ -69,7 +69,7 @@ class NiftyManagement(Plugin):
     #         print("Error: NiftyManagement, image2read method.")
 
 
-    def process(self, config, data):
+    def process(self,data):
         print("NiftyManagement plugin...")
 
         if data.get('CT') is not None:  # if already exist
@@ -77,12 +77,12 @@ class NiftyManagement(Plugin):
             print("Removing to data: 'CT':[image, mask]")
 
         if self.index < len(self.src_mask_list):
-            self.mask = MyNifty()
+            self.mask = NiftyFormat()
             mask_filename = self.src_mask_list[self.index]
             self.mask.read(self.src_mask_path, mask_filename)
             self.mask.image2array()
 
-            self.image = MyNifty()
+            self.image = NiftyFormat()
             image_filename = self.get_image_filename(mask_filename)
             self.image.read(self.src_image_path, image_filename)
             self.image.image2array()
@@ -107,14 +107,14 @@ def debug_NiftyManagement():
 
     data = {}
 
-    myNiftyHandler = NiftyManagement('myNiftyHandler', \
-                                     config.src_image_path, \
-                                     config.src_mask_path, \
-                                     config.mask_pattern, \
-                                     config.dst_image_path, \
-                                     config.dst_mask_path)
+    myNiftyHandler = NiftyManagementPlugin('myNiftyHandler', \
+                                           config.src_image_path, \
+                                           config.src_mask_path, \
+                                           config.mask_pattern, \
+                                           config.dst_image_path, \
+                                           config.dst_mask_path)
     myNiftyHandler.masks2read()
-    myNiftyHandler.process(config, data)
+    myNiftyHandler.process(data)
 
 
 if __name__ == '__main__':
