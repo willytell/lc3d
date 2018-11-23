@@ -15,7 +15,7 @@ class ImageFormat(ABC):
         pass
 
 
-class MyNifty(ImageFormat):
+class NiftyFormat(ImageFormat):
     def __init__(self):
         self.origin = None
         self.spacing = None
