@@ -19,7 +19,7 @@ class Plugin(ABC):
         pass
 
 
-class Labeling(Plugin):
+class LabelPlugin(Plugin):
     def __init__(self, name):
         self.structure_element = None
         self.ncomponents = None
@@ -60,7 +60,7 @@ class Labeling(Plugin):
 
 
 
-class VolumeBBox(Plugin):
+class VolumeBBoxPlugin(Plugin):
     def __init__(self, name):
         self.vbbox_list = []
         super().__init__(name)
@@ -125,7 +125,7 @@ class VolumeBBox(Plugin):
 
 
 
-class ExpandVBBox(Plugin):
+class ExpandVBBoxPlugin(Plugin):
     def __init__(self,name, strategy):
         self.strategy = strategy
         self.expanded_vbbox_list = []
@@ -174,7 +174,7 @@ class ExpandVBBox(Plugin):
         return False
 
 
-class SaveVBBoxNifty(Plugin):
+class SaveVBBoxNiftyPlugin(Plugin):
     def __init__(self, name, dst_image_path, dst_mask_path):
         self.dst_image_path = dst_image_path
         self.dst_mask_path = dst_mask_path
@@ -253,7 +253,8 @@ class SlidingWindowPlugin(Plugin):
 
             if little_cubes is not None:
                 # extract features and save them.
-                self.strategy.featureExtraction(little_cubes)
+                self.context_interface(little_cubes)
+                #self.strategy.featureExtraction(little_cubes)
             # if little_cube IS None, it's because the window to slide was larger than the volume, then there's
             # nothing to do.
 
@@ -289,22 +290,22 @@ def debug_test():
 
 
     # Plugin Labeling
-    labeling = Labeling('labeling')
+    labeling = LabelPlugin('labeling')
     dim_x, dim_y, dim_z = get_components(config.labeling_se_dim)
     labeling.set_structure_element(dim_x, dim_y, dim_z)
     labeling.process(config, data)
 
     # Plugin VolumeBBox
-    volumeBBox =  VolumeBBox('volumeBBox')
+    volumeBBox =  VolumeBBoxPlugin('volumeBBox')
     volumeBBox.process(config, data)
 
     # Plugin UniformExpandVBBox
     uniformExpansionVBBox = UniformExpansion('uniform', config.background_p, config.groundtruth_p, config.nvoxels, config.check_bg_percentage)
-    expandVBBox = ExpandVBBox('expand_vbbox', uniformExpansionVBBox)
+    expandVBBox = ExpandVBBoxPlugin('expand_vbbox', uniformExpansionVBBox)
     expandVBBox.process(config, data)
 
     # Plugin SaveVBBoxNifty
-    saveVBBoxNifty = SaveVBBoxNifty('SaveVBBoxNifty', config.dst_image_path, config.dst_mask_path)
+    saveVBBoxNifty = SaveVBBoxNiftyPlugin('SaveVBBoxNifty', config.dst_image_path, config.dst_mask_path)
     saveVBBoxNifty.process(config, data)
 
 
