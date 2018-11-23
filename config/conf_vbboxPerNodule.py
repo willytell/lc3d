@@ -20,7 +20,8 @@ labeling_se_dim         = '(3, 3, 3)'   # Labeling structure_element dimension
 expanionStrategy        = 'uniform'     # ['uniform' | 'uniform checking bg']
 background_p            = 55
 groundtruth_p           = 45
-nvoxels                 = 1             # Amount of voxels to increment in each step.
+uniform_nvoxels         = 1             # Uniform Expansion: amount of voxels to increment in each step.
+bg_p_nvoxels            = 1             # Bg_p Expansion: amount of voxels to increment in each step.
 check_bg_percentage     = True          # Check the background percentage during the expansion
 
 # Sliding Window

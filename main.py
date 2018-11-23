@@ -1,7 +1,7 @@
 import argparse
 
 from configuration import Configuration
-from input import MyNifty
+from input import NiftyFormat
 
 def main ():
     parser = argparse.ArgumentParser(description='lc3d')
@@ -23,7 +23,7 @@ def main ():
     if args.action == 'extract_features':
         print ("Extracting features...")
 
-    n = MyNifty("","","","")
+    n = NiftyFormat("", "", "", "")
     n.get_next()
 
 

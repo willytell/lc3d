@@ -32,3 +32,10 @@ mode                    = 'edge'        # ['constant'|'edge'|'mean'| etc.] Look 
 
 # Radiomic
 radiomicConfigFile      = "/home/willytell/Documentos/PhD/lc3d/config/Params.yaml"
+#radiomicLogPath         = "/home/willytell/Documentos/PhD/lc3d/log"
+
+# Radiomic output file and its config
+csvFilePath             = "/home/willytell/Documentos/PhD/lc3d/output/features.csv"
+sep                     = ","
+encoding                = "utf-8"
+
