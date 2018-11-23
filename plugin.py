@@ -5,7 +5,7 @@ import os
 from configuration import Configuration
 from abc import ABC, abstractmethod
 from scipy.ndimage.measurements import label
-from imageFormat import MyNifty
+from imageFormat import NiftyFormat
 from utils import get_dst_filename_nifty
 from slidingwindow import SlidingWindow
 
@@ -15,7 +15,7 @@ class Plugin(ABC):
         super().__init__()
 
     @abstractmethod
-    def process(self, config, data):
+    def process(self, data):
         pass
 
 
@@ -33,7 +33,7 @@ class LabelPlugin(Plugin):
         return self.structure_element
 
 
-    def process(self, config, data):
+    def process(self, data):
         print ("Labeling plugin...")
 
         # if already exist an item, then remove it.
@@ -79,7 +79,7 @@ class VolumeBBoxPlugin(Plugin):
 
         return [rmin, rmax, cmin, cmax, zmin, zmax]
 
-    def process(self, config, data):
+    def process(self, data):
         print("VolumeBBox plugin...")
 
         # if already exist an item, then remove it.
@@ -127,7 +127,7 @@ class VolumeBBoxPlugin(Plugin):
 
 class ExpandVBBoxPlugin(Plugin):
     def __init__(self,name, strategy):
-        self.strategy = strategy
+        self.strategy = strategy        # this is the particular expansion strategy.
         self.expanded_vbbox_list = []
         super().__init__(name)
 
@@ -135,8 +135,8 @@ class ExpandVBBoxPlugin(Plugin):
         vbbox = self.strategy.expand(labeled, minimal_vbbox, ncomponents, label_number)
         return vbbox
 
-    def process(self, config, data):
-        print("UniformExpandVBBox plugin...")
+    def process(self, data):
+        print("UniformExpandVBBox plugin... using {} strategy.".format(self.strategy.name))
 
         # if already exist an item, then remove it.
         if data.get('CT_mask_expanded') is not None:
@@ -150,7 +150,7 @@ class ExpandVBBoxPlugin(Plugin):
             print("CT_mask_labeled and CT_mask_vbbox are present keys in the data dictionary")
 
             labeled, ncomponents = data['CT_mask_labeled']
-            vbbox_list = data['CT_mask_vbbox']  # list with minimals vbbox.
+            vbbox_list = data['CT_mask_vbbox']  # list with minimals vbboxes.
 
             for label_number, minimal_vbbox in enumerate(vbbox_list):
                 if label_number != 0:
@@ -182,7 +182,7 @@ class SaveVBBoxNiftyPlugin(Plugin):
         # self.mask = None
         super().__init__(name)
 
-    def process(self, config, data):
+    def process(self, data):
         print("SaveVBBox plugin...")
 
         # This plugin does not add any item to 'data', thus it is not necessary to
@@ -200,7 +200,7 @@ class SaveVBBoxNiftyPlugin(Plugin):
                 if label_number != 0:       # skipping the background, which has a label = 0.
 
                     # Mask
-                    expanded_mask = MyNifty()
+                    expanded_mask = NiftyFormat()
                     expanded_mask.volume = np.copy(mask.volume[vbbox[0]:vbbox[1]+1, \
                                                                vbbox[2]:vbbox[3]+1, \
                                                                vbbox[4]:vbbox[5]+1])
@@ -211,7 +211,7 @@ class SaveVBBoxNiftyPlugin(Plugin):
                     expanded_mask.save(self.dst_mask_path, mask_fname)
 
                     # Image
-                    expanded_image = MyNifty()
+                    expanded_image = NiftyFormat()
                     expanded_image.volume = np.copy(image.volume[vbbox[0]:vbbox[1]+1, \
                                                                  vbbox[2]:vbbox[3]+1, \
                                                                  vbbox[4]:vbbox[5]+1])
@@ -237,7 +237,7 @@ class SlidingWindowPlugin(Plugin):
     def context_interface(self, array):
         self.strategy.featureExtraction(array)
 
-    def process(self, config, data):
+    def process(self, data):
         print("SlidingWindow plugin...")
 
         if 'CT' in data:
@@ -270,20 +270,20 @@ class SlidingWindowPlugin(Plugin):
 
 def debug_test():
     from utils import get_components
-    from input import NiftyManagement
-    from expansionStrategy import UniformExpansion
+    from input import NiftyManagementPlugin
+    from expansionStrategy import Bg_pExpansion
 
     config = Configuration("config/conf_extractfeatures.py", "extract features").load()
 
     data = {}
 
     # Plugin NiftyManagement
-    myNiftyHandler = NiftyManagement('myNiftyHandler',
-                                     config.src_image_path,
-                                     config.src_mask_path,
-                                     config.mask_pattern,
-                                     config.dst_image_path,
-                                     config.dst_mask_path)
+    myNiftyHandler = NiftyManagementPlugin('myNiftyHandler',
+                                           config.src_image_path,
+                                           config.src_mask_path,
+                                           config.mask_pattern,
+                                           config.dst_image_path,
+                                           config.dst_mask_path)
     myNiftyHandler.masks2read()
     myNiftyHandler.process(config, data)
 
@@ -293,20 +293,20 @@ def debug_test():
     labeling = LabelPlugin('labeling')
     dim_x, dim_y, dim_z = get_components(config.labeling_se_dim)
     labeling.set_structure_element(dim_x, dim_y, dim_z)
-    labeling.process(config, data)
+    labeling.process(data)
 
     # Plugin VolumeBBox
     volumeBBox =  VolumeBBoxPlugin('volumeBBox')
-    volumeBBox.process(config, data)
+    volumeBBox.process(data)
 
     # Plugin UniformExpandVBBox
-    uniformExpansionVBBox = UniformExpansion('uniform', config.background_p, config.groundtruth_p, config.nvoxels, config.check_bg_percentage)
+    uniformExpansionVBBox = Bg_pExpansion('uniform', config.background_p, config.groundtruth_p, config.nvoxels, config.check_bg_percentage)
     expandVBBox = ExpandVBBoxPlugin('expand_vbbox', uniformExpansionVBBox)
-    expandVBBox.process(config, data)
+    expandVBBox.process(data)
 
     # Plugin SaveVBBoxNifty
     saveVBBoxNifty = SaveVBBoxNiftyPlugin('SaveVBBoxNifty', config.dst_image_path, config.dst_mask_path)
-    saveVBBoxNifty.process(config, data)
+    saveVBBoxNifty.process(data)
 
 
 if __name__ == '__main__':
