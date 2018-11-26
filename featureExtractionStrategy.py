@@ -3,6 +3,7 @@ import SimpleITK as sitk
 import numpy as np
 import pandas as pd
 import os
+from collections import OrderedDict
 import six
 import radiomics
 from radiomics import featureextractor  # This module is used for interaction with pyradiomics
@@ -111,7 +112,7 @@ class FeatureExtractionStrategy(ABC):
         pass
 
 
-class MyRadiomic(FeatureExtractionStrategy):
+class RadiomicClass(FeatureExtractionStrategy):
     def __init__(self, name, csvFilePath, sep, encoding):
         self.csvFilePath = csvFilePath
         self.sep = sep
@@ -130,9 +131,9 @@ class MyRadiomic(FeatureExtractionStrategy):
         self.extractor = featureextractor.RadiomicsFeaturesExtractor(paramPath)
 
         print("Using configuration file to parameters: {}".format(paramPath))
-        print('Extraction parameters:\n\t', self.extractor.settings)
-        print('Enabled filters:\n\t', self.extractor._enabledImagetypes)
-        print('Enabled features:\n\t', self.extractor._enabledFeatures)
+        print("Extraction parameters: {}".format(OrderedDict(sorted(self.extractor.settings.items()))))
+        print('Enabled filters:\n\t', OrderedDict(sorted(self.extractor._enabledImagetypes.items())))
+        print('Enabled features:\n\t', OrderedDict(sorted(self.extractor._enabledFeatures.items())))
 
     def appendDFToCSV_void(self, df, csvFilePath, sep=",", encoding='utf-8'):
         if not os.path.isfile(csvFilePath):
@@ -149,7 +150,7 @@ class MyRadiomic(FeatureExtractionStrategy):
 
 
 
-    def featureExtraction(self, array):
+    def featureExtraction(self, array, origin, spacing, direction):
         print("Using Radiomic to extract features...")
 
         assert type(array).__module__ == np.__name__, "Error, expected a numpy object."
@@ -161,24 +162,38 @@ class MyRadiomic(FeatureExtractionStrategy):
         for i in range(max_i):
             for j in range(max_j):
                 for k in range(max_k):
+
+                    # if i == 0 and j == 1 and k == 21:
+
                     volume = array[i, j, k]
                     imageITK = sitk.GetImageFromArray(volume)
-                    featureVector = self.extractor.execute(imageITK, self.maskITK)   # allways is used the same mask
-                    #print("-----------------------------------------")
-                    #print("Result type: {} and length: {}".format(type(featureVector), len(featureVector)))  # result is returned in a Python ordered dictionary)
-                    #print('')
-                    #print('Calculated features')
+
+                    imageITK.origin = origin
+                    imageITK.spacing = spacing
+                    imageITK.direction = direction
+
+                    # print("i={}, j={}, k={}".format(i, j, k))
+
+
+                    featureVector = self.extractor.execute(imageITK, self.maskITK)  # allways is used the same mask
+                    # print("Result type: {} and length: {}".format(type(featureVector), len(featureVector)))  # result is returned in a Python ordered dictionary)
+                    # print('')
+                    # print('Calculated features')
 
                     # Show output
                     new_row = {}
-                    for featureName in featureVector.keys():
-                        #print('Computed %s: %s' % (featureName, featureVector[featureName]))
-                        #print(featureVector[featureName])
+                    for featureName in featureVector.keys():  # Note that featureVectors is a 'disordered dictionary'
+                        # print('Computed %s: %s' % (featureName, featureVector[featureName]))
+                        # print(featureVector[featureName])
                         if ('firstorder' in featureName) or ('glszm' in featureName):
                             new_row.update({featureName: featureVector[featureName]})
 
-                    #new_row = sorted(new_row)
-                    mydict.append(new_row)
+                    od = OrderedDict(sorted(new_row.items()))  # Ordering the new_row dictionary
+                    # for name in od.keys():
+                    #     print('Computed %s: %s' % (name, od[name]))
+
+
+                    mydict.append(od)
 
         df = pd.DataFrame.from_dict(mydict)
         self.appendDFToCSV_void(df=df, csvFilePath=self.csvFilePath, sep=self.sep, encoding=self.enconding)
@@ -195,7 +210,7 @@ def debug_test():
     #print(rw)
     print(rw.shape)
 
-    mr = MyRadiomic('myRadiomic')
+    mr = RadiomicClass('myRadiomic')
     mr.build_mask_trick(window_size=3)
     mr.build_extractor(paramPath='/home/willytell/Documentos/PhD/pyradiomics/examples/exampleSettings/Params.yaml')
     mr.featureExtraction(rw)

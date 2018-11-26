@@ -6,7 +6,7 @@ from utils import get_components
 from plugin import LabelPlugin, VolumeBBoxPlugin, ExpandVBBoxPlugin, SaveVBBoxNiftyPlugin, SlidingWindowPlugin
 from expansionStrategy import UniformExpansion, Bg_pExpansion
 from slidingwindow import SlidingWindow
-from featureExtractionStrategy import MyRadiomic
+from featureExtractionStrategy import RadiomicClass
 
 
 class Pipeline(ABC):
@@ -118,7 +118,7 @@ class FeatureExtractionPipeline(Pipeline):
                                         axes=None,
                                         toend=True)
 
-        myRadiomic = MyRadiomic('MyRadiomic', self.config.csvFilePath, self.config.sep, self.config.encoding)
+        myRadiomic = RadiomicClass('Radiomic', self.config.csvFilePath, self.config.sep, self.config.encoding)
         myRadiomic.build_mask_trick(self.config.window_size)
         myRadiomic.build_extractor(self.config.radiomicConfigFile)
         mySlidingWindowPlugin = SlidingWindowPlugin('SlidingWindow',
@@ -155,9 +155,9 @@ def debug_test():
 #
 #     config = Configuration("config/conf_featureExtraction.py", "extract features").load()
 #
-#     myFeatureExtractionProcessing = FeatureExtractionPipeline('FeatureExtractionProcessing', config)
-#     myFeatureExtractionProcessing.build_stack()
-#     myFeatureExtractionProcessing.run()
+#     myFeatureExtractionPipeline = FeatureExtractionPipeline('FeatureExtractionProcessing', config)
+#     myFeatureExtractionPipeline.build_stack()
+#     myFeatureExtractionPipeline.run()
 
 
 if __name__ == '__main__':

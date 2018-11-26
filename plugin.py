@@ -234,8 +234,8 @@ class SlidingWindowPlugin(Plugin):
         self.image = None
         super().__init__(name)
 
-    def context_interface(self, array):
-        self.strategy.featureExtraction(array)
+    def context_interface(self, array, origin, spacing, direction):
+        self.strategy.featureExtraction(array, origin, spacing, direction)
 
     def process(self, data):
         print("SlidingWindow plugin...")
@@ -244,19 +244,24 @@ class SlidingWindowPlugin(Plugin):
             print("CT is a present key in the data dictionary")
             self.image, _ = data['CT']  # remember that self.image is a MyNifty object.
 
+            # print("   >> origin: {}".format(self.image.origin))
+            # print("   >> spacing: {}".format(self.image.spacing))
+            # print("   >> direction: {}".format(self.image.direction))
+
             # adding Pad to the volume
             newVolume = self.slidingWindow.padding(self.image.volume)
 
-            # little_cubes will contains all the volumes generated after slide the window throughout the volume.
+            # little_cubes will contains all the small volumes generated
+            # after the window have been shifted throughout the volume.
             # By the way, little_cubes is an numpy object.
             little_cubes = self.slidingWindow.rolling_window(newVolume)
 
             if little_cubes is not None:
                 # extract features and save them.
-                self.context_interface(little_cubes)
+                self.context_interface(little_cubes, self.image.origin, self.image.spacing, self.image.direction)
                 #self.strategy.featureExtraction(little_cubes)
-            # if little_cube IS None, it's because the window to slide was larger than the volume, then there's
-            # nothing to do.
+            # if little_cube IS None, it's because the window turned out to be larger than the volume, then there's
+            # nothing to do or compute.
 
             return True
 
