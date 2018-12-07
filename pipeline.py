@@ -52,35 +52,35 @@ class VBBoxPerNodulePipeline(Pipeline):
 
     def build_stack(self):
         # Plugin NiftyManagement
-        myNiftyManagement = NiftyManagementPlugin('NiftyManagement', self.config.src_image_path, self.config.src_mask_path,
+        myNiftyManagement = NiftyManagementPlugin('CT', None, self.config.src_image_path, self.config.src_mask_path,
                                                   self.config.mask_pattern, self.config.dst_image_path, self.config.dst_mask_path, internal=1)
         myNiftyManagement.masks2read()
         self.plugins_stack.append(myNiftyManagement)
 
         # Plugin Labeling
-        myLabeling = LabelPlugin('Labeling')
+        myLabeling = LabelPlugin('CT_mask_labeled', [myNiftyManagement.name])
         dim_x, dim_y, dim_z = get_components(self.config.labeling_se_dim)
         myLabeling.set_structure_element(dim_x, dim_y, dim_z)
         self.plugins_stack.append(myLabeling)
 
         # Plugin VolumeBBox
-        myVolumeBBox = VolumeBBoxPlugin('VolumeBBox')
+        myVolumeBBox = VolumeBBoxPlugin('CT_mask_vbbox', [myLabeling.name])
         self.plugins_stack.append(myVolumeBBox)
 
-        # Plugin UniformExpandVBBox
+        # Plugin ExpandVBBoxPlugin
         myUniformExpansion = UniformExpansion('UniformExpansion', self.config.uniform_nvoxels)
-        myExpandVBBoxOne = ExpandVBBoxPlugin('ExpandVBBox', myUniformExpansion)
+        myExpandVBBoxOne = ExpandVBBoxPlugin('CT_mask_vbbox_uniform_expansion', [myLabeling.name, myVolumeBBox.name], myUniformExpansion)
         self.plugins_stack.append(myExpandVBBoxOne)
 
 
-        # Plugin UniformExpandVBBox
+        # Plugin ExpandVBBoxPlugin: instance 2
         myBg_pExpansion = Bg_pExpansion('Bg_pExpansion', self.config.background_p, self.config.groundtruth_p, self.config.bg_p_nvoxels,
                                              self.config.check_bg_percentage)
-        myExpandVBBoxTwo = ExpandVBBoxPlugin('ExpandVBBox', myBg_pExpansion)
+        myExpandVBBoxTwo = ExpandVBBoxPlugin('CT_mask_vbbox_Bg_p_expansion', [myLabeling.name, myExpandVBBoxOne.name], myBg_pExpansion)
         self.plugins_stack.append(myExpandVBBoxTwo)
 
         # Plugin SaveVBBoxNifty
-        mySaveVBBoxNifty = SaveVBBoxNiftyPlugin('SaveVBBoxNifty', self.config.dst_image_path, self.config.dst_mask_path)
+        mySaveVBBoxNifty = SaveVBBoxNiftyPlugin('SaveVBBoxNifty', [myNiftyManagement.name, myExpandVBBoxTwo.name], self.config.dst_image_path, self.config.dst_mask_path)
         self.plugins_stack.append(mySaveVBBoxNifty)
 
     def run(self):
@@ -104,7 +104,7 @@ class FeatureExtractionPipeline(Pipeline):
 
     def build_stack(self):
         # Plugin NiftyManagement
-        myNiftyManagement = NiftyManagementPlugin('NiftyManagement', self.config.src_image_path, self.config.src_mask_path,
+        myNiftyManagement = NiftyManagementPlugin('CT', None, self.config.src_image_path, self.config.src_mask_path,
                                                   self.config.mask_pattern, self.config.dst_image_path, self.config.dst_mask_path, internal=2)
         myNiftyManagement.masks2read()
         self.plugins_stack.append(myNiftyManagement)
@@ -121,7 +121,7 @@ class FeatureExtractionPipeline(Pipeline):
         myRadiomic = RadiomicClass('Radiomic', self.config.csvFilePath, self.config.sep, self.config.encoding)
         myRadiomic.build_mask_trick(self.config.window_size)
         myRadiomic.build_extractor(self.config.radiomicConfigFile)
-        mySlidingWindowPlugin = SlidingWindowPlugin('SlidingWindow',
+        mySlidingWindowPlugin = SlidingWindowPlugin('SlidingWindow', [myNiftyManagement.name],
                                                     slidingWindow=mySlidingWindow,
                                                     strategy=myRadiomic)
         self.plugins_stack.append(mySlidingWindowPlugin)
@@ -141,23 +141,23 @@ class FeatureExtractionPipeline(Pipeline):
         print("Elapsed time for the FeatureExtractionProcessing: {:.2f} minutes.".format(elapsed_time))
 
 
-def debug_test():
-    from configuration import Configuration
-
-    config = Configuration("config/conf_vbboxPerNodule.py", "extract features").load()
-
-    myVBBoxPerNoduleProcessing = VBBoxPerNodulePipeline('VBBoxPerNoduleProcessing', config)
-    myVBBoxPerNoduleProcessing.build_stack()
-    myVBBoxPerNoduleProcessing.run()
-
 # def debug_test():
 #     from configuration import Configuration
 #
-#     config = Configuration("config/conf_featureExtraction.py", "extract features").load()
+#     config = Configuration("config/conf_vbboxPerNodule.py", "extract features").load()
 #
-#     myFeatureExtractionPipeline = FeatureExtractionPipeline('FeatureExtractionProcessing', config)
-#     myFeatureExtractionPipeline.build_stack()
-#     myFeatureExtractionPipeline.run()
+#     myVBBoxPerNoduleProcessing = VBBoxPerNodulePipeline('VBBoxPerNodulePipeline', config)
+#     myVBBoxPerNoduleProcessing.build_stack()
+#     myVBBoxPerNoduleProcessing.run()
+
+def debug_test():
+    from configuration import Configuration
+
+    config = Configuration("config/conf_featureExtraction.py", "extract features").load()
+
+    myFeatureExtractionPipeline = FeatureExtractionPipeline('FeatureExtractionProcessing', config)
+    myFeatureExtractionPipeline.build_stack()
+    myFeatureExtractionPipeline.run()
 
 
 if __name__ == '__main__':

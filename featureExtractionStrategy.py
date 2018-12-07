@@ -158,6 +158,8 @@ class RadiomicClass(FeatureExtractionStrategy):
 
         max_i, max_j, max_k = array.shape[:3]
 
+        print("Extracting new {} rows of features.".format(max_i * max_j * max_k))
+
         mydict = []
         for i in range(max_i):
             for j in range(max_j):
@@ -197,6 +199,7 @@ class RadiomicClass(FeatureExtractionStrategy):
 
         df = pd.DataFrame.from_dict(mydict)
         self.appendDFToCSV_void(df=df, csvFilePath=self.csvFilePath, sep=self.sep, encoding=self.enconding)
+        print("Rows appended to: {}".format(self.csvFilePath))
 
 
 

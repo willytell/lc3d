@@ -3,8 +3,9 @@
 
 
 # DB SOURCE PATHS
-src_image_path          = "/home/willytell/Escritorio/LungCTDataBase/Nii_Vol/CT_nii"
-src_mask_path           = "/home/willytell/Escritorio/LungCTDataBase/Nii_Vol/CTmask_nii"
+src_image_path          = "/media/willytell/TOSHIBA EXT/LungCTDataBase/LIDC-IDRI/Nii_Vol/CT_nii"
+src_mask_path           = "/media/willytell/TOSHIBA EXT/LungCTDataBase/LIDC-IDRI/Nii_Vol/CTmask_nii"
+
 
 mask_pattern            = '*.nii.gz'
 

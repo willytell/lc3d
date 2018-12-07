@@ -13,7 +13,7 @@ from configuration import Configuration
 #         super().__init__(name)
 
 class NiftyManagementPlugin(Plugin):
-    def __init__(self, name, src_image_path, src_mask_path, mask_pattern, dst_image_path, dst_mask_path, internal=1):     #mask_pattern = '*.nii.gz'
+    def __init__(self, name, input_key, src_image_path, src_mask_path, mask_pattern, dst_image_path, dst_mask_path, internal=1):     #mask_pattern = '*.nii.gz'
         self.src_image_path = src_image_path
         self.src_mask_path = src_mask_path
         self.mask_pattern = mask_pattern
@@ -24,7 +24,7 @@ class NiftyManagementPlugin(Plugin):
         self.image = None
         self.mask = None
         self.internal = internal
-        super().__init__(name)
+        super().__init__(name, input_key)
 
     def masks2read(self):
         self.src_mask_list = [os.path.basename(x) for x in sorted(glob.glob(os.path.join(self.src_mask_path, self.mask_pattern)))]
@@ -70,27 +70,30 @@ class NiftyManagementPlugin(Plugin):
 
 
     def process(self,data):
-        print("NiftyManagement plugin...")
+        print("NiftyManagement plugin with name: {} ...".format(self.name))
 
-        if data.get('CT') is not None:  # if already exist
-            data.pop('CT')  # remove item
-            print("Removing to data: 'CT':[image, mask]")
+        #self.name equal to 'CT'
+        if data.get(self.name) is not None:  # if already exist
+            data.pop(self.name)  # remove item
+            print("Removing to data: '{}':[image, mask]".format(self.name))
 
         if self.index < len(self.src_mask_list):
             self.mask = NiftyFormat()
             mask_filename = self.src_mask_list[self.index]
             self.mask.read(self.src_mask_path, mask_filename)
             self.mask.image2array()
+            print("Mask shape:  {}".format(self.mask.volume.shape))
 
             self.image = NiftyFormat()
             image_filename = self.get_image_filename(mask_filename)
             self.image.read(self.src_image_path, image_filename)
             self.image.image2array()
+            print("Image shape: {}".format(self.image.volume.shape))
 
             assert self.image.volume.shape == self.mask.volume.shape, "In NiftyManagement, it is supposed that image's volume and mask's volume should have the same shape."
 
-            data['CT'] = [self.image, self.mask]     # add item
-            print("Adding to data: 'CT':[image, mask]")
+            data[self.name] = [self.image, self.mask]     # add item
+            print("Adding to data: '{}':[image, mask]".format(self.name))
 
             self.index += 1  # increment the index for the next item.
             return True

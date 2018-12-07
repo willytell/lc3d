@@ -35,7 +35,7 @@ radiomicConfigFile      = "/home/willytell/Documentos/PhD/lc3d/config/Params.yam
 #radiomicLogPath         = "/home/willytell/Documentos/PhD/lc3d/log"
 
 # Radiomic output file and its config
-csvFilePath             = "/home/willytell/Documentos/PhD/lc3d/output/features.csv"
+csvFilePath             = "/home/willytell/Documentos/PhD/lc3d/output/features23.csv"
 sep                     = ","
 encoding                = "utf-8"
 

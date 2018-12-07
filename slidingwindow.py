@@ -41,7 +41,7 @@ class SlidingWindow():
         if volume.ndim == 3:
             to_add = np.array([[1,1], [1,1], [1,1]])
             #volume = np.pad(volume, slices * to_add, self.mode)
-            print("The Volume has been padded using the method: '{}'.".format(self.mode))
+            #print("The Volume has been padded using the method: '{}'.".format(self.mode))
         else:
             print("Error in dimension of the volume.")
             raise 1 == 0
