@@ -1,4 +1,5 @@
 import numpy as np
+from random import randint, random
 
 from abc import ABC, abstractmethod
 
@@ -134,17 +135,47 @@ class ExpansionStrategy(ABC):
     def expand(self):
         pass
 
+class Uniform(ExpansionStrategy):
+    def __init__(self, name, nvoxel, limit):
 
-# Background Percentage Expansion
-class UniformExpansion(ExpansionStrategy):
-    def __init__(self, name, nvoxel):
+        if type(nvoxel) is list:
+            # nvoxel is a range
+            assert len(nvoxel) == 2, "The range must be determined by to integers."
+            assert nvoxel[0] < nvoxel[1], "To specify a range: the first number must be less than the second one."
+            assert nvoxel[0] > 0, "Must increase at least one voxel."
+            self.nvoxel_range = nvoxel
+        else:
+            # nvoxel is an int
+            self.nvoxel_range = None
+
+        if type(limit) is list:
+            # limit is a range
+            assert len(limit) == 2, "Limit: the range must be determined by to integers."
+            assert limit[0] < limit[1], "Limit: to specify a range: the first number must be less than the second one."
+            assert limit[0] > 0, "Limit: must increase at least one voxel."
+            self.nvoxel_limit = limit
+        else:
+            # limit is an int
+            self.nvoxel_limit = None
+
         self.nvoxel = nvoxel
+        self.limit = limit
         super().__init__(name)
 
     def expand(self, labeled, minimal_vbbox, ncomponents, label_number):
         tmp_vbbox = minimal_vbbox
 
-        # growth_xyz represents the directions to growth: [x-, x+, y-, y+, z-, z+]
+        # if nvoxel is a sequence, this is a range from whrere a number must be selected randomly. Then this number
+        # will be used to increase the ROI.
+        if self.nvoxel_range is not None:
+            self.nvoxel = randint(self.nvoxel_range[0], self.nvoxel_range[1])
+            print("Number of Voxels to increase the vbbox: {}".format(self.nvoxel))
+
+        if self.nvoxel_limit is not None:
+            self.limit = randint(self.nvoxel_limit[0], self.nvoxel_limit[1])
+            print("Maximum number of voxels to increase the vbbox: {}".format(self.limit))
+
+        # growth_xyz represents the directions to make the growth: [x-, x+, y-, y+, z-, z+]
         growth_xyz = np.array([True, True, True, True, True, True], dtype=np.bool)
 
         # Defining a dictionary with function to expand the vbbox.
@@ -152,19 +183,120 @@ class UniformExpansion(ExpansionStrategy):
 
         print("    tmp_vbbox (xmin, xmax, ymin, ymax, zmin, zmax) = ({})".format(tmp_vbbox))
 
-        idx = 0
-        while idx <= (len(growth_xyz) - 1):
-            myfunc = fc_dict[idx]
-            myfunc(labeled, tmp_vbbox, label_number, ncomponents, self.nvoxel, growth_xyz)
+        stop = False
+        total_sum = 0
 
-            idx += 1
-        # end while
+        while not stop:
+            idx = 0
+            backup_lst = tmp_vbbox
+            while idx <= (len(growth_xyz) - 1):
+                myfunc = fc_dict[idx]
+                myfunc(labeled, tmp_vbbox, label_number, ncomponents, self.nvoxel, growth_xyz)
 
-        print("NEW tmp_vbbox (xmin, xmax, ymin, ymax, zmin, zmax) = ({})".format(tmp_vbbox))
+                idx += 1
+            # end while
+
+            if np.all(growth_xyz):
+                total_sum += self.nvoxel
+                backup_lst = tmp_vbbox
+                print("NEW tmp_vbbox (xmin, xmax, ymin, ymax, zmin, zmax) = ({})".format(tmp_vbbox))
+
+            if not np.all(growth_xyz) or self.limit <= total_sum:
+                stop = True
+
+        del growth_xyz
+        tmp_vbbox = backup_lst
+
+        #print("Expanded vbbox: {}".format(tmp_vbbox))
+        return tmp_vbbox
+
+
+
+class GrowInAnyDirection(ExpansionStrategy):
+    """Increase the size of the ROI in any direction x, y, and z."""
+
+    def __init__(self, name, nvoxel, limit):
+        """
+        Params
+        ------
+        name : str
+            Name of the object
+        nvoxel : int or sequence of two int that indicates a range
+            With a number it is the amount to increase in each iteration the ROI. If this is a sequence of two numbers,
+            it represents a range from where a number will be selected randomly to increase in each iteration the ROI.
+        limit : int or sequence of two int that indicates a range
+            Indicates how many voxels should be increased to the ROI. If this is a sequence (range), a random number
+            will be selected between the range to be used as limit.
+        """
+
+        if type(nvoxel) is list:
+            # nvoxel is a range
+            assert len(nvoxel) == 2, "nvoxel: the range must be determined by to integers."
+            assert nvoxel[0] < nvoxel[1], "To specify a range: the first number must be less than the second one."
+            assert nvoxel[0] > 0, "Must increase at least one voxel."
+            self.nvoxel_range = nvoxel
+        else:
+            # nvoxel is an int
+            self.nvoxel_range = None
+
+        if type(limit) is list:
+            # limit is a range
+            assert len(limit) == 2, "Limit: the range must be determined by to integers."
+            assert limit[0] < limit[1], "Limit: to specify a range: the first number must be less than the second one."
+            assert limit[0] > 0, "Limit: must increase at least one voxel."
+            self.nvoxel_limit = limit
+        else:
+            # limit is an int
+            self.nvoxel_limit = None
+
+        self.nvoxel = nvoxel
+        self.limit = limit
+        super().__init__(name)
+
+    def expand(self, labeled, minimal_vbbox, ncomponents, label_number):
+        tmp_vbbox = minimal_vbbox
+
+        # if nvoxel is a sequence, this is a range from whrere a number must be selected randomly. Then this number
+        # will be used to increase the ROI.
+        if self.nvoxel_range is not None:
+            self.nvoxel = randint(self.nvoxel_range[0], self.nvoxel_range[1])
+            print("Number of Voxels to increase the vbbox: {}".format(self.nvoxel))
+
+        if self.nvoxel_limit is not None:
+            self.limit = randint(self.nvoxel_limit[0], self.nvoxel_limit[1])
+            print("Maximum number of voxels to increase the vbbox: {}".format(self.limit))
+
+        # growth_xyz represents the directions to make the growth: [x-, x+, y-, y+, z-, z+]
+        growth_xyz = np.array([True, True, True, True, True, True], dtype=np.bool)
+
+        # Defining a dictionary with function to expand the vbbox.
+        fc_dict = {0: super().zero, 1: super().one, 2: super().two, 3: super().three, 4: super().four, 5: super().five}
+
+        print("    tmp_vbbox (xmin, xmax, ymin, ymax, zmin, zmax) = ({})".format(tmp_vbbox))
+
+        stop = False
+        total_sum = 0
+
+        while not stop:
+            idx = 0
+            while idx <= (len(growth_xyz) - 1):
+                myfunc = fc_dict[idx]
+                myfunc(labeled, tmp_vbbox, label_number, ncomponents, self.nvoxel, growth_xyz)
+
+                idx += 1
+            # end while
+
+            print("NEW tmp_vbbox (xmin, xmax, ymin, ymax, zmin, zmax) = ({})".format(tmp_vbbox))
+
+            if np.any(growth_xyz):
+                total_sum += self.nvoxel
+
+            if not np.any(growth_xyz) or self.limit <= total_sum:
+                stop = True
+
         del growth_xyz
 
-
-        print("Expanded vbbox: {}".format(tmp_vbbox))
+        #print("Expanded vbbox: {}".format(tmp_vbbox))
         return tmp_vbbox
 
 
@@ -176,6 +308,7 @@ class Bg_pExpansion(ExpansionStrategy):
         self.background_percentage = background_percentage
         self.groundtruth_percentage = groundtruth_percentage
         self.nvoxel = nvoxel
+        assert type(nvoxel) is int, "With Backgroun-percentage, nvoxel must be an integer."
         self.check_bg_percentage = check_bg_percentage
         super().__init__(name)
 
@@ -233,4 +366,169 @@ class Bg_pExpansion(ExpansionStrategy):
 
         print("Expanded vbbox: {}".format(tmp_vbbox))
         return tmp_vbbox
+
+
+class PhysicianDeltaExpansion(ExpansionStrategy):
+    def __init__(self, name, expand_x, expand_y, expand_z, growth_x, growth_y, growth_z, delta_x, delta_y, delta_z):
+        self.expand_x = expand_x
+        self.expand_y = expand_y
+        self.expand_z = expand_z
+        self.growth_x = growth_x
+        self.growth_y = growth_y
+        self.growth_z = growth_z
+        self.delta_x = delta_x
+        self.delta_y = delta_y
+        self.delta_z = delta_z
+        super().__init__(name)
+
+
+    def findExpansionLimits(self):
+
+        #### calculate the limits for X ###
+        Xn1 = self.expand_x[0]
+        Xn2 = self.expand_x[1]
+
+        if self.delta_x is not None:
+            delta_Xn1 = self.delta_x[0]
+            sign = 1 if random() < 0.5 else -1
+            tmp = Xn1 + sign * randint(0, delta_Xn1)
+            Xn1 = tmp if 0 < tmp else 0
+
+            delta_Xn2 = self.delta_x[1]
+            sign = 1 if random() < 0.5 else -1
+            tmp = Xn2 + sign * randint(0, delta_Xn2)
+            Xn2 = tmp if 0 < tmp else 0
+
+        #### calculate the limits for Y ###
+        Ym1 = self.expand_y[0]
+        Ym2 = self.expand_y[1]
+
+        if self.delta_y is not None:
+            delta_Ym1 = self.delta_y[0]
+            sign = 1 if random() < 0.5 else -1
+            tmp = Ym1 + sign * randint(0, delta_Ym1)
+            Ym1 = tmp if 0 < tmp else 0
+
+            delta_Ym2 = self.delta_y[1]
+            sign = 1 if random() < 0.5 else -1
+            tmp = Ym2 + sign * randint(0, delta_Ym2)
+            Ym2 = tmp if 0 < tmp else 0
+
+        #### calculate the limits for Z ###
+        Zq1 = self.expand_z[0]
+        Zq2 = self.expand_z[1]
+
+        if self.delta_z is not None:
+            delta_Zq1 = self.delta_z[0]
+            sign = 1 if random() < 0.5 else -1
+            tmp = Zq1 + sign * randint(0, delta_Zq1)
+            Zq1 = tmp if 0 < tmp else 0
+
+            delta_Zq2 = self.delta_z[1]
+            sign = 1 if random() < 0.5 else -1
+            tmp = Zq2 + sign * randint(0, delta_Zq2)
+            Zq2 = tmp if 0 < tmp else 0
+
+
+        return Xn1, Xn2, Ym1, Ym2, Zq1, Zq2
+
+
+
+    def expand(self, labeled, minimal_vbbox, ncomponents, label_number):
+        tmp_vbbox = minimal_vbbox
+
+        Xn1, Xn2, Ym1, Ym2, Zq1, Zq2 = self.findExpansionLimits()
+
+        # if it is bigger than zero, then we should try to expand the vbbox in that direction.
+        a = True if Xn1 != 0 else False
+        b = True if Xn2 != 0 else False
+        c = True if Ym1 != 0 else False
+        d = True if Ym2 != 0 else False
+        e = True if Zq1 != 0 else False
+        f = True if Zq2 != 0 else False
+
+        # growth_xyz represents the directions to make the growth: [x-, x+, y-, y+, z-, z+]
+        growth_xyz = np.array([a, b, c, d, e, f], dtype=np.bool)
+
+        # Defining a dictionary with function to expand the vbbox.
+        fc_dict = {0: super().zero, 1: super().one, 2: super().two, 3: super().three, 4: super().four, 5: super().five}
+
+        print("   expand in x-, x+, y-, y+, z-, z+: {}, {}, {}, {}, {}, {}".format(Xn1, Xn2, Ym1, Ym2, Zq1, Zq2))
+        print("   growth in x, y, z: {}, {}, {}".format(self.growth_x, self.growth_y, self.growth_z))
+        print("   tmp_vbbox (xmin, xmax, ymin, ymax, zmin, zmax) = ({})".format(tmp_vbbox))
+
+        stop = False
+        total_Xn1 = 0   # x-
+        total_Xn2 = 0   # x+
+        total_Ym1 = 0   # y-
+        total_Ym2 = 0   # y+
+        total_Zq1 = 0   # z-
+        total_Zq2 = 0   # z+
+
+        while not stop:
+
+            super().zero(labeled, tmp_vbbox, label_number, ncomponents, self.growth_x, growth_xyz)    # x-
+            super().one(labeled, tmp_vbbox, label_number, ncomponents, self.growth_x, growth_xyz)     # x+
+
+            super().two(labeled, tmp_vbbox, label_number, ncomponents, self.growth_y, growth_xyz)     # y-
+            super().three(labeled, tmp_vbbox, label_number, ncomponents, self.growth_y, growth_xyz)   # y+
+
+            super().four(labeled, tmp_vbbox, label_number, ncomponents, self.growth_z, growth_xyz)    # z-
+            super().five(labeled, tmp_vbbox, label_number, ncomponents, self.growth_z, growth_xyz)    # z+
+
+
+            ### x- ###
+            if growth_xyz[0]:
+                total_Xn1 += self.growth_x
+
+            if (Xn1 == total_Xn1) or (Xn1 < (total_Xn1 + self.growth_x)):
+                growth_xyz[0] = False
+
+            ### x+ ###
+            if growth_xyz[1]:
+                total_Xn2 += self.growth_x
+
+            if (Xn2 == total_Xn2) or (Xn2 < (total_Xn2 + self.growth_x)):
+                growth_xyz[1] = False
+
+            ### y- ###
+            if growth_xyz[2]:
+                total_Ym1 += self.growth_y
+
+            if (Ym1 == total_Ym1) or (Ym1 < (total_Ym1 + self.growth_y)):
+                growth_xyz[2] = False
+
+            ### y+ ###
+            if growth_xyz[3]:
+                total_Ym2 += self.growth_y
+
+            if (Ym2 == total_Ym2) or (Ym2 < (total_Ym2 + self.growth_y)):
+                growth_xyz[3] = False
+
+            ### z- ###
+            if growth_xyz[4]:
+                total_Zq1 += self.growth_z
+
+            if (Zq1 == total_Zq1) or (Zq1 < (total_Zq1 + self.growth_z)):
+                growth_xyz[4] = False
+
+            ### z+ ###
+            if growth_xyz[5]:
+                total_Zq2 += self.growth_z
+
+            if (Zq2 == total_Zq2) or (Zq2 < (total_Zq2 + self.growth_z)):
+                growth_xyz[5] = False
+
+
+            print("NEW tmp_vbbox (xmin, xmax, ymin, ymax, zmin, zmax) = ({})".format(tmp_vbbox))
+
+
+            if not np.any(growth_xyz):
+                stop = True
+
+        del growth_xyz
+
+        #print("Expanded vbbox: {}".format(tmp_vbbox))
+        return tmp_vbbox
+
 

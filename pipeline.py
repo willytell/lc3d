@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from input import NiftyManagementPlugin
 from utils import get_components
 from plugin import LabelPlugin, VolumeBBoxPlugin, ExpandVBBoxPlugin, SaveVBBoxNiftyPlugin, SlidingWindowPlugin
-from expansionStrategy import UniformExpansion, Bg_pExpansion
+from expansionStrategy import GrowInAnyDirection, Bg_pExpansion
 from slidingwindow import SlidingWindow
 from featureExtractionStrategy import RadiomicClass
 
@@ -68,7 +68,7 @@ class VBBoxPerNodulePipeline(Pipeline):
         self.plugins_stack.append(myVolumeBBox)
 
         # Plugin ExpandVBBoxPlugin
-        myUniformExpansion = UniformExpansion('UniformExpansion', self.config.uniform_nvoxels)
+        myUniformExpansion = GrowInAnyDirection('UniformExpansion', self.config.uniform_nvoxels)
         myExpandVBBoxOne = ExpandVBBoxPlugin('CT_mask_vbbox_uniform_expansion', [myLabeling.name, myVolumeBBox.name], myUniformExpansion)
         self.plugins_stack.append(myExpandVBBoxOne)
 
@@ -141,23 +141,23 @@ class FeatureExtractionPipeline(Pipeline):
         print("Elapsed time for the FeatureExtractionProcessing: {:.2f} minutes.".format(elapsed_time))
 
 
-# def debug_test():
-#     from configuration import Configuration
-#
-#     config = Configuration("config/conf_vbboxPerNodule.py", "extract features").load()
-#
-#     myVBBoxPerNoduleProcessing = VBBoxPerNodulePipeline('VBBoxPerNodulePipeline', config)
-#     myVBBoxPerNoduleProcessing.build_stack()
-#     myVBBoxPerNoduleProcessing.run()
-
 def debug_test():
     from configuration import Configuration
 
-    config = Configuration("config/conf_featureExtraction.py", "extract features").load()
+    config = Configuration("config/conf_vbboxPerNodule.py", "extract features").load()
 
-    myFeatureExtractionPipeline = FeatureExtractionPipeline('FeatureExtractionProcessing', config)
-    myFeatureExtractionPipeline.build_stack()
-    myFeatureExtractionPipeline.run()
+    myVBBoxPerNoduleProcessing = VBBoxPerNodulePipeline('VBBoxPerNodulePipeline', config)
+    myVBBoxPerNoduleProcessing.build_stack()
+    myVBBoxPerNoduleProcessing.run()
+
+# def debug_test():
+#     from configuration import Configuration
+#
+#     config = Configuration("config/conf_featureExtraction.py", "extract features").load()
+#
+#     myFeatureExtractionPipeline = FeatureExtractionPipeline('FeatureExtractionProcessing', config)
+#     myFeatureExtractionPipeline.build_stack()
+#     myFeatureExtractionPipeline.run()
 
 
 if __name__ == '__main__':
