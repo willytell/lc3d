@@ -4,7 +4,7 @@ import glob
 import os
 
 from plugin import Plugin
-from imageFormat import NiftyFormat
+from imageFormat import NiftiFormat
 
 from configuration import Configuration
 
@@ -12,7 +12,7 @@ from configuration import Configuration
 #     def __init__(self, name):
 #         super().__init__(name)
 
-class NiftyManagementPlugin(Plugin):
+class NiftiManagementPlugin(Plugin):
     def __init__(self, name, input_key, src_image_path, src_mask_path, mask_pattern, dst_image_path, dst_mask_path, internal=1):     #mask_pattern = '*.nii.gz'
         self.src_image_path = src_image_path
         self.src_mask_path = src_mask_path
@@ -24,6 +24,10 @@ class NiftyManagementPlugin(Plugin):
         self.image = None
         self.mask = None
         self.internal = internal
+        self.mask_filename = ''
+        self.image_filename = ''
+        self.caseID = -1        # -1 means Not assigned yet
+        self.lessionID = -1     # -1 means Not assigned yet
         super().__init__(name, input_key)
 
     def masks2read(self):
@@ -37,22 +41,30 @@ class NiftyManagementPlugin(Plugin):
     # Depending on the self.internal value it will find the image's filename.
     def get_image_filename(self, mask_filename):
 
-        if self.internal == 1:  # image and mask to be processed for first time
+        # To find the ROIs
+        if self.internal == 1:  # image and mask to be processed for first time to obtain the ROIs.
             # Image filename: LIDC-IDRI-0001_GT1.nii.gz
             # Mask filename:  LIDC-IDRI-0001_GT1_Mask.nii.gz
             if self.mask_pattern == '*.nii.gz':
                 name_splitted = mask_filename.split('.')[0].split('_')
                 image_filename = name_splitted[0] + '_' + name_splitted[1] + '.nii.gz'
                 return image_filename
+
+        # To extract the features from the ROIs
         elif self.internal == 2:  # for image and mask ready to extract features
             # Image filename: LIDC-IDRI-0001_GT1_1.nii.gz
             # Mask filename:  LIDC-IDRI-0001_GT1_1_Mask.nii.gz
             if self.mask_pattern == '*.nii.gz':
                 name_splitted = mask_filename.split('.')[0].split('_')
                 image_filename = name_splitted[0] + '_' + name_splitted[1] + '_' + name_splitted[2] + '.nii.gz'
+
+                # Assign the caseID and lessionID
+                self.lessionID = name_splitted[2]
+                self.caseID = name_splitted[0].split('-')[2]
+
                 return image_filename
         else:
-            print("Error, unknown 'internal' pattern of name.")
+            print("NiftiManagementPlugin: Error, unknown 'internal' pattern of name.")
             return None
 
 
@@ -66,36 +78,39 @@ class NiftyManagementPlugin(Plugin):
     #             self.src_image_list.append(fname)
     #             print("{} ==> {}".format(item, fname))
     #     else:
-    #         print("Error: NiftyManagement, image2read method.")
+    #         print("Error: NiftiManagement, image2read method.")
 
 
     def process(self,data):
-        print("NiftyManagement plugin with name: {} ...".format(self.name))
+        print("> NiftiManagement plugin with name: {} ...".format(self.name))
 
         #self.name equal to 'CT'
         if data.get(self.name) is not None:  # if already exist
             data.pop(self.name)  # remove item
-            print("Removing to data: '{}':[image, mask]".format(self.name))
+            print("    Removing to data: '{}':[image, mask]".format(self.name))
 
         if self.index < len(self.src_mask_list):
-            self.mask = NiftyFormat()
-            mask_filename = self.src_mask_list[self.index]
-            self.mask.read(self.src_mask_path, mask_filename)
+            # read the mask file
+            self.mask = NiftiFormat()
+            self.mask_filename = self.src_mask_list[self.index]
+            self.mask.read(self.src_mask_path, self.mask_filename)
             self.mask.image2array()
-            print("Mask shape:  {}".format(self.mask.volume.shape))
+            print("    Mask shape:  {}".format(self.mask.volume.shape))
 
-            self.image = NiftyFormat()
-            image_filename = self.get_image_filename(mask_filename)
-            self.image.read(self.src_image_path, image_filename)
+            # read the image file
+            self.image = NiftiFormat()
+            self.image_filename = self.get_image_filename(self.mask_filename)
+            self.image.read(self.src_image_path, self.image_filename)
             self.image.image2array()
-            print("Image shape: {}".format(self.image.volume.shape))
+            print("    Image shape: {}".format(self.image.volume.shape))
 
-            assert self.image.volume.shape == self.mask.volume.shape, "In NiftyManagement, it is supposed that image's volume and mask's volume should have the same shape."
+            assert self.image.volume.shape == self.mask.volume.shape, "    In NiftiManagement, it is supposed that image's volume and mask's volume should have the same shape."
 
-            data[self.name] = [self.image, self.mask]     # add item
-            print("Adding to data: '{}':[image, mask]".format(self.name))
+            # add item
+            data[self.name] = [self.image, self.mask, self.image_filename, self.mask_filename, self.caseID, self.lessionID]
+            print("    Adding to data: '{}':[image, mask, image_filename, mask_filename, caseID, lessionID]".format(self.name))
 
-            self.index += 1  # increment the index for the next item.
+            self.index += 1  # increment the index for the next file to be read.
             return True
 
         else:
@@ -105,20 +120,20 @@ class NiftyManagementPlugin(Plugin):
 
 
 
-def debug_NiftyManagement():
+def debug_NiftiManagement():
     config = Configuration("config/conf_extractfeatures.py", "extract features").load()
 
     data = {}
 
-    myNiftyHandler = NiftyManagementPlugin('myNiftyHandler', \
+    myNiftiHandler = NiftiManagementPlugin('myNiftiHandler', \
                                            config.src_image_path, \
                                            config.src_mask_path, \
                                            config.mask_pattern, \
                                            config.dst_image_path, \
                                            config.dst_mask_path)
-    myNiftyHandler.masks2read()
-    myNiftyHandler.process(data)
+    myNiftiHandler.masks2read()
+    myNiftiHandler.process(data)
 
 
 if __name__ == '__main__':
-    debug_NiftyManagement()
+    debug_NiftiManagement()

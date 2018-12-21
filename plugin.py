@@ -5,8 +5,8 @@ import os
 from configuration import Configuration
 from abc import ABC, abstractmethod
 from scipy.ndimage.measurements import label
-from imageFormat import NiftyFormat
-from utils import get_dst_filename_nifty
+from imageFormat import NiftiFormat
+from utils import get_dst_filename_nifti
 from slidingwindow import SlidingWindow
 
 class Plugin(ABC):
@@ -35,28 +35,28 @@ class LabelPlugin(Plugin):
 
 
     def process(self, data):
-        print ("Label plugin with name: '{}' ... ".format(self.name))
+        print ("> Label plugin with name: '{}' ... ".format(self.name))
 
         # if already exist an item, then remove it.
         if data.get(self.name) is not None:
             data.pop(self.name)
-            print("Removing to data: '{}':[labeled, ncomponents]".format(self.name))
+            print("    Removing to data: '{}':[labeled, ncomponents]".format(self.name))
 
         # self.input_key[0] equal to 'CT'
         if self.input_key[0] in data:
-            print("{} is a present key in the data dictionary".format(self.input_key[0]))
+            print("    {} is a present key in the data dictionary".format(self.input_key[0]))
             _, self.mask = data[self.input_key[0]]
 
             self.labeled, self.ncomponents = label(self.mask.volume, self.structure_element)
-            print("Labeling labeled ncomponents: {}".format(self.ncomponents))
+            print("    Labeling labeled ncomponents: {}".format(self.ncomponents))
 
             # Add the new item to data
             data[self.name] = [self.labeled, self.ncomponents]
-            print("Adding to data: '{}':[labeled, ncomponents]".format(self.name))
+            print("    Adding to data: '{}':[labeled, ncomponents]".format(self.name))
             return True
 
         else:
-            print("Error: In the Labeling, process() method does not found {} key to process.".format(self.input_key[0]))
+            print("    Error: In the Labeling, process() method does not found {} key to process.".format(self.input_key[0]))
 
         return False
 
@@ -82,16 +82,16 @@ class VolumeBBoxPlugin(Plugin):
         return [rmin, rmax, cmin, cmax, zmin, zmax]
 
     def process(self, data):
-        print("VolumeBBoxPlugin plugin with name: '{}' ... ".format(self.name))
+        print("> VolumeBBoxPlugin plugin with name: '{}' ... ".format(self.name))
 
         # if already exist an item, then remove it.
         if data.get(self.name) is not None:
             data.pop(self.name)
-            print("Removeing to data: '{}':vbbox_list".format(self.name))
+            print("    Removeing to data: '{}':vbbox_list".format(self.name))
 
         # self.input_key[0] equal to 'CT_mask_labeled'
         if self.input_key[0] in data:
-            print("{} is a present key in the data dictionary".format(self.input_key[0]))
+            print("    {} is a present key in the data dictionary".format(self.input_key[0]))
             labeled, ncomponents = data[self.input_key[0]]
 
             self.vbbox_list = []
@@ -108,22 +108,22 @@ class VolumeBBoxPlugin(Plugin):
                     mask[np.where(labeled==i)]=1
 
                     vbbox = self.bbox_3D(mask)   # Find the exact position for the volume bounding box
-                    print("For the label {} its volume bbox is (xmin, xmax, ymin, ymax, zmin, zmax) = ({})".format(i, vbbox))
+                    print("    Label: {} has a volume's bbox (xmin, xmax, ymin, ymax, zmin, zmax) = ({})".format(i, vbbox))
 
                     self.vbbox_list.append(vbbox)
                     del mask
 
                 # ncomponents does not have included the background.
-                assert (ncomponents + 1) == len(self.vbbox_list), "In VolumeBBox, ncomponents must be equal to the amount of vbbox."
+                assert (ncomponents + 1) == len(self.vbbox_list), "    In VolumeBBox, ncomponents must be equal to the amount of vbbox."
 
                 # Add the new item to data
                 #self.name equal to 'CT_mask_vbbox'
                 data[self.name] = self.vbbox_list
-                print("Adding to data: '{}':vbbox_list".format(self.name))
+                print("    Adding to data: '{}':vbbox_list".format(self.name))
                 return True
 
         else:
-            print('Error: In the VolumeBBox, process() method does not found CT_mask_labeled key to process.')
+            print('    Error: In the VolumeBBox, process() method does not found CT_mask_labeled key to process.')
 
         return False
 
@@ -140,26 +140,27 @@ class ExpandVBBoxPlugin(Plugin):
         return vbbox
 
     def process(self, data):
-        print("ExpandVBBox plugin with name: '{}' using {} strategy ... ".format(self.name, self.strategy.name))
+        print("> ExpandVBBox plugin with name: '{}' using {} strategy ... ".format(self.name, self.strategy.name))
 
         # if already exist an item, then remove it.
         # self.name equal to 'CT_mask_expanded'
         if data.get(self.name) is not None:
             data.pop(self.name)
-            print("Removeing to data: '{}':expanded_vbbox_list".format(self.name))
+            print("    Removeing to data: '{}':expanded_vbbox_list".format(self.name))
 
         self.expanded_vbbox_list = []
 
         # Get some items from data dictionary
         # self.input_key[0] equal to 'CT_mask_labeled' and self.input_key equal[1] equal to 'CT_mask_vbbox'
         if (self.input_key[0] in data) and (self.input_key[1] in data):
-            print("{} and {} are present keys in the data dictionary".format(self.input_key[0], self.input_key[1]))
+            print("    {} and {} are present keys in the data dictionary".format(self.input_key[0], self.input_key[1]))
 
             labeled, ncomponents = data[self.input_key[0]]
             vbbox_list = data[self.input_key[1]]  # list with minimals vbboxes.
 
             for label_number, minimal_vbbox in enumerate(vbbox_list):
                 if label_number != 0:
+                    print("    Label: {}".format(label_number))
                     vbbox = self.context_interface(labeled, minimal_vbbox, ncomponents, label_number)
                     self.expanded_vbbox_list.append(vbbox)
                 else:
@@ -168,20 +169,20 @@ class ExpandVBBoxPlugin(Plugin):
                     self.expanded_vbbox_list.append(None)
 
             # ncomponents does not have included the background.
-            assert (ncomponents+1)== len(self.expanded_vbbox_list), "ExpandVBBox, ncomponents must be equal to the amount of vbbox."
+            assert (ncomponents+1)== len(self.expanded_vbbox_list), "    ExpandVBBox, ncomponents must be equal to the amount of vbbox."
 
             # Add the new item to data
             # self.name equal to 'CT_mask_expanded'
             data[self.name] = self.expanded_vbbox_list
-            print("Adding to data: '{}':expanded_vbbox_list".format(self.name))
+            print("    Adding to data: '{}':expanded_vbbox_list".format(self.name))
             return True
         else:
-            print("Error: In ExpandVBBox, process() method does not found {} and {} keys to process.".format(self.input_key[0], self.input_key[1]))
+            print("    Error: In ExpandVBBox, process() method does not found {} and {} keys to process.".format(self.input_key[0], self.input_key[1]))
 
         return False
 
 
-class SaveVBBoxNiftyPlugin(Plugin):
+class SaveVBBoxNiftiPlugin(Plugin):
     def __init__(self, name, input_key, dst_image_path, dst_mask_path):
         self.dst_image_path = dst_image_path
         self.dst_mask_path = dst_mask_path
@@ -190,47 +191,50 @@ class SaveVBBoxNiftyPlugin(Plugin):
         super().__init__(name, input_key)
 
     def process(self, data):
-        print("SaveVBBox plugin with name: {} ...".format(self.name))
+        print("> SaveVBBox plugin with name: {} ...".format(self.name))
 
         # This plugin does not add any item to 'data', thus it is not necessary to
         # check or remove anything from this plugin in the data dictionary.
 
         #self.input_key[0] equal to 'CT' and self.input_key[1] equal to 'CT_mask_expanded'
-        if (self.input_key[0] in data) and (self.input_key[0] in data):
-            print("{} and {} are present keys in the data dictionary".format(self.input_key[0], self.input_key[1]))
+        if (self.input_key[0] in data) and (self.input_key[1] in data):
+            print("    {} and {} are present keys in the data dictionary".format(self.input_key[0], self.input_key[1]))
 
             image, mask = data[self.input_key[0]]
             vbbox_list = data[self.input_key[1]]
 
-            # check image and mask must be object from MyNifty class.
+            # check image and mask must be object from MyNifti class.
 
             for label_number, vbbox in enumerate(vbbox_list):
                 if label_number != 0:       # skipping the background, which has a label = 0.
 
                     # Mask
-                    expanded_mask = NiftyFormat()
+                    expanded_mask = NiftiFormat()
                     expanded_mask.volume = np.copy(mask.volume[vbbox[0]:vbbox[1]+1, \
                                                                vbbox[2]:vbbox[3]+1, \
                                                                vbbox[4]:vbbox[5]+1])
                     expanded_mask.array2image()
+                    print("    Array2Image: array {} to image {}".format(expanded_mask.volume.shape, expanded_mask.image.GetSize()))
                     expanded_mask.set_properties(properties=mask.get_properties())
+
                     # Get the names for the image and mask
-                    image_fname, mask_fname = get_dst_filename_nifty(mask.filename, label_number)
+                    image_fname, mask_fname = get_dst_filename_nifti(mask.filename, label_number)
                     expanded_mask.save(self.dst_mask_path, mask_fname)
 
                     # Image
-                    expanded_image = NiftyFormat()
+                    expanded_image = NiftiFormat()
                     expanded_image.volume = np.copy(image.volume[vbbox[0]:vbbox[1]+1, \
                                                                  vbbox[2]:vbbox[3]+1, \
                                                                  vbbox[4]:vbbox[5]+1])
                     expanded_image.array2image()
+                    print("    Array2Image: array {} to image {}".format(expanded_image.volume.shape, expanded_image.image.GetSize()))
                     expanded_image.set_properties(properties=image.get_properties())
                     expanded_image.save(self.dst_image_path, image_fname)
 
             return True
 
         else:
-            print("Error: In SaveVBBoxNifty, process() method does not found {} and {} keys to process.".format(self.input_key[0], self.input_key[1]))
+            print("    Error: In SaveVBBoxNifti, process() method does not found {} and {} keys to process.".format(self.input_key[0], self.input_key[1]))
 
         return False
 
@@ -240,18 +244,23 @@ class SlidingWindowPlugin(Plugin):
         self.slidingWindow = slidingWindow
         self.strategy = strategy
         self.image = None
+        self.mask = None
+        self.image_filename = ''
+        self.mask_filename = ''
+        self.caseID = -1
+        self.lessionID = -1
         super().__init__(name, input_key)
 
-    def context_interface(self, array, origin, spacing, direction):
-        self.strategy.featureExtraction(array, origin, spacing, direction)
+    def context_interface(self, array, mask, image_filename, mask_filename, caseID, lessionID, origin, spacing, direction):
+        self.strategy.featureExtraction(array, mask, image_filename, mask_filename, caseID, lessionID, origin, spacing, direction)
 
     def process(self, data):
-        print("SlidingWindow plugin with name: {} using strategy {} ...".format(self.name, self.strategy.name))
+        print("> SlidingWindow plugin with name: {} using strategy {} ...".format(self.name, self.strategy.name))
 
         #self.input_key[0] equal to 'CT'
         if self.input_key[0] in data:
-            print("{} is a present key in the data dictionary".format(self.input_key[0]))
-            self.image, _ = data[self.input_key[0]]  # remember that self.image is a MyNifty object.
+            print("    {} is a present key in the data dictionary".format(self.input_key[0]))
+            self.image, self.mask, self.image_filename, self.mask_filename, self.caseID, self.lessionID = data[self.input_key[0]][:6]  # remember that self.image is a MyNifti object.
 
             # print("   >> origin: {}".format(self.image.origin))
             # print("   >> spacing: {}".format(self.image.spacing))
@@ -259,16 +268,22 @@ class SlidingWindowPlugin(Plugin):
 
             # adding Pad to the volume
             newVolume = self.slidingWindow.padding(self.image.volume)
-            print("The Volume has been padded using the method: '{}, now its shape is: {}'.".format(self.slidingWindow.mode, newVolume.shape))
+            print("    The initial volume's shape is: {}.".format(self.image.volume.shape))
+            print("    The Image.Volume has been padded using the method: '{}, now its shape is: {}'.".format(self.slidingWindow.mode, newVolume.shape))
 
             # little_cubes will contains all the small volumes generated
             # after the window have been shifted throughout the volume.
             # By the way, little_cubes is an numpy object.
             little_cubes = self.slidingWindow.rolling_window(newVolume)
 
+
+            print("    little_cubes.shape : {}".format(little_cubes.shape))
+
+
+
             if little_cubes is not None:
                 # extract features and save them.
-                self.context_interface(little_cubes, self.image.origin, self.image.spacing, self.image.direction)
+                self.context_interface(little_cubes, self.mask.volume, self.image_filename, self.mask_filename, self.caseID, self.lessionID, self.image.origin, self.image.spacing, self.image.direction)
                 #self.strategy.featureExtraction(little_cubes)
             # if little_cube IS None, it's because the window turned out to be larger than the volume, then there's
             # nothing to do or compute.
@@ -276,7 +291,7 @@ class SlidingWindowPlugin(Plugin):
             return True
 
         else:
-            print("Error: In the SlidingWindowPlugin, process() method does not found {} key to process.".format(self.input_key[0]))
+            print("    Error: In the SlidingWindowPlugin, process() method does not found {} key to process.".format(self.input_key[0]))
 
         return False
 
@@ -285,22 +300,22 @@ class SlidingWindowPlugin(Plugin):
 
 def debug_test():
     from utils import get_components
-    from input import NiftyManagementPlugin
+    from input import NiftiManagementPlugin
     from expansionStrategy import Bg_pExpansion
 
     config = Configuration("config/conf_extractfeatures.py", "extract features").load()
 
     data = {}
 
-    # Plugin NiftyManagement
-    myNiftyHandler = NiftyManagementPlugin('myNiftyHandler',
+    # Plugin NiftiManagement
+    myNiftiHandler = NiftiManagementPlugin('myNiftiHandler',
                                            config.src_image_path,
                                            config.src_mask_path,
                                            config.mask_pattern,
                                            config.dst_image_path,
                                            config.dst_mask_path)
-    myNiftyHandler.masks2read()
-    myNiftyHandler.process(config, data)
+    myNiftiHandler.masks2read()
+    myNiftiHandler.process(config, data)
 
 
 
@@ -319,9 +334,9 @@ def debug_test():
     expandVBBox = ExpandVBBoxPlugin('expand_vbbox', uniformExpansionVBBox)
     expandVBBox.process(data)
 
-    # Plugin SaveVBBoxNifty
-    saveVBBoxNifty = SaveVBBoxNiftyPlugin('SaveVBBoxNifty', config.dst_image_path, config.dst_mask_path)
-    saveVBBoxNifty.process(data)
+    # Plugin SaveVBBoxNifti
+    saveVBBoxNifti = SaveVBBoxNiftiPlugin('SaveVBBoxNifti', config.dst_image_path, config.dst_mask_path)
+    saveVBBoxNifti.process(data)
 
 
 if __name__ == '__main__':

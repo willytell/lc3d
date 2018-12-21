@@ -15,7 +15,7 @@ class ImageFormat(ABC):
         pass
 
 
-class NiftyFormat(ImageFormat):
+class NiftiFormat(ImageFormat):
     def __init__(self):
         self.origin = None
         self.spacing = None
@@ -31,7 +31,7 @@ class NiftyFormat(ImageFormat):
         self.filename = filename
 
         self.image = sitk.ReadImage(os.path.join(self.path, self.filename))
-        print("MyNifty, reading: {}".format(os.path.join(self.path, self.filename)))
+        print("    MyNifti, reading: {}".format(os.path.join(self.path, self.filename)))
 
         # Record properties
         self.origin = self.image.GetOrigin()
@@ -40,7 +40,7 @@ class NiftyFormat(ImageFormat):
 
     def save(self, path, filename):
         sitk.WriteImage(self.image, os.path.join(path, filename))
-        print("MyNifty, writing: {}".format(os.path.join(path, filename)))
+        print("    MyNifti, writing: {}".format(os.path.join(path, filename)))
 
 
     # CONVERTING from SimpleITK image to Numpy array
@@ -48,14 +48,14 @@ class NiftyFormat(ImageFormat):
         if self.image is not None:
             self.volume = sitk.GetArrayFromImage(self.image)
         else:
-            print("Error: In MyNifty class, image2array method.")
+            print("    Error: In MyNifti class, image2array method.")
 
     # CONVERTING from Numpy to SimpleITK image
     def array2image(self):
         if self.volume is not None:
             self.image = sitk.GetImageFromArray(self.volume)
         else:
-            print("Error: In MyNifty class, array2image method.")
+            print("    Error: In MyNifti class, array2image method.")
 
     def get_properties(self):
         return {'origin': self.origin, 'spacing' : self.spacing, 'direction' : self.direction }

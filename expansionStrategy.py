@@ -135,7 +135,7 @@ class ExpansionStrategy(ABC):
     def expand(self):
         pass
 
-class Uniform(ExpansionStrategy):
+class UniformExpansion(ExpansionStrategy):
     def __init__(self, name, nvoxel, limit):
 
         if type(nvoxel) is list:
@@ -169,11 +169,11 @@ class Uniform(ExpansionStrategy):
         # will be used to increase the ROI.
         if self.nvoxel_range is not None:
             self.nvoxel = randint(self.nvoxel_range[0], self.nvoxel_range[1])
-            print("Number of Voxels to increase the vbbox: {}".format(self.nvoxel))
+            print("      Number of Voxels to increase the vbbox: {}".format(self.nvoxel))
 
         if self.nvoxel_limit is not None:
             self.limit = randint(self.nvoxel_limit[0], self.nvoxel_limit[1])
-            print("Maximum number of voxels to increase the vbbox: {}".format(self.limit))
+            print("      Maximum number of voxels to increase the vbbox: {}".format(self.limit))
 
         # growth_xyz represents the directions to make the growth: [x-, x+, y-, y+, z-, z+]
         growth_xyz = np.array([True, True, True, True, True, True], dtype=np.bool)
@@ -181,7 +181,7 @@ class Uniform(ExpansionStrategy):
         # Defining a dictionary with function to expand the vbbox.
         fc_dict = {0: super().zero, 1: super().one, 2: super().two, 3: super().three, 4: super().four, 5: super().five}
 
-        print("    tmp_vbbox (xmin, xmax, ymin, ymax, zmin, zmax) = ({})".format(tmp_vbbox))
+        print("          tmp_vbbox (xmin, xmax, ymin, ymax, zmin, zmax) = ({})".format(tmp_vbbox))
 
         stop = False
         total_sum = 0
@@ -199,7 +199,7 @@ class Uniform(ExpansionStrategy):
             if np.all(growth_xyz):
                 total_sum += self.nvoxel
                 backup_lst = tmp_vbbox
-                print("NEW tmp_vbbox (xmin, xmax, ymin, ymax, zmin, zmax) = ({})".format(tmp_vbbox))
+                print("      NEW tmp_vbbox (xmin, xmax, ymin, ymax, zmin, zmax) = ({})".format(tmp_vbbox))
 
             if not np.all(growth_xyz) or self.limit <= total_sum:
                 stop = True
@@ -212,7 +212,7 @@ class Uniform(ExpansionStrategy):
 
 
 
-class GrowInAnyDirection(ExpansionStrategy):
+class AnyExpansion(ExpansionStrategy):
     """Increase the size of the ROI in any direction x, y, and z."""
 
     def __init__(self, name, nvoxel, limit):
@@ -260,11 +260,11 @@ class GrowInAnyDirection(ExpansionStrategy):
         # will be used to increase the ROI.
         if self.nvoxel_range is not None:
             self.nvoxel = randint(self.nvoxel_range[0], self.nvoxel_range[1])
-            print("Number of Voxels to increase the vbbox: {}".format(self.nvoxel))
+            print("      Number of Voxels to increase the vbbox: {}".format(self.nvoxel))
 
         if self.nvoxel_limit is not None:
             self.limit = randint(self.nvoxel_limit[0], self.nvoxel_limit[1])
-            print("Maximum number of voxels to increase the vbbox: {}".format(self.limit))
+            print("      Maximum number of voxels to increase the vbbox: {}".format(self.limit))
 
         # growth_xyz represents the directions to make the growth: [x-, x+, y-, y+, z-, z+]
         growth_xyz = np.array([True, True, True, True, True, True], dtype=np.bool)
@@ -272,7 +272,7 @@ class GrowInAnyDirection(ExpansionStrategy):
         # Defining a dictionary with function to expand the vbbox.
         fc_dict = {0: super().zero, 1: super().one, 2: super().two, 3: super().three, 4: super().four, 5: super().five}
 
-        print("    tmp_vbbox (xmin, xmax, ymin, ymax, zmin, zmax) = ({})".format(tmp_vbbox))
+        print("          tmp_vbbox (xmin, xmax, ymin, ymax, zmin, zmax) = ({})".format(tmp_vbbox))
 
         stop = False
         total_sum = 0
@@ -286,7 +286,7 @@ class GrowInAnyDirection(ExpansionStrategy):
                 idx += 1
             # end while
 
-            print("NEW tmp_vbbox (xmin, xmax, ymin, ymax, zmin, zmax) = ({})".format(tmp_vbbox))
+            print("      NEW tmp_vbbox (xmin, xmax, ymin, ymax, zmin, zmax) = ({})".format(tmp_vbbox))
 
             if np.any(growth_xyz):
                 total_sum += self.nvoxel
@@ -324,10 +324,10 @@ class Bg_pExpansion(ExpansionStrategy):
                          vbbox[2]:vbbox[3] + 1, \
                          vbbox[4]:vbbox[5] + 1]
         super().count_all_labels(volume, ncomponents, count)
-        print("label_number : {}".format(label_number))
-        print("count = {}".format(count))
+        #print("    Label : {}".format(label_number))
+        print("      count = {}".format(count))
         bg_p, gt_p = self.percentage_calculation(count, label_number)
-        print("Percentage of vbbox: bg_p = {:.2f}, gt_p = {:.2f}".format(round(bg_p, 2), round(gt_p, 2)))
+        print("      Percentage of vbbox: bg_p = {:.2f}, gt_p = {:.2f}".format(round(bg_p, 2), round(gt_p, 2)))
         del count
 
         return bg_p, gt_p
@@ -346,7 +346,7 @@ class Bg_pExpansion(ExpansionStrategy):
             # Defining a dictionary with function to expand the vbbox.
             fc_dict = {0: super().zero, 1: super().one, 2: super().two, 3: super().three, 4: super().four, 5: super().five}
 
-            print("    tmp_vbbox (xmin, xmax, ymin, ymax, zmin, zmax) = ({})".format(tmp_vbbox))
+            print("          tmp_vbbox (xmin, xmax, ymin, ymax, zmin, zmax) = ({})".format(tmp_vbbox))
             while idx <= (len(growth_xyz) - 1) and (not stop):
                 myfunc = fc_dict[idx]
                 myfunc(labeled, tmp_vbbox, label_number, ncomponents, self.nvoxel, growth_xyz)
@@ -359,12 +359,12 @@ class Bg_pExpansion(ExpansionStrategy):
                 idx += 1
             # end while
 
-            print("NEW tmp_vbbox (xmin, xmax, ymin, ymax, zmin, zmax) = ({})".format(tmp_vbbox))
+            print("      NEW tmp_vbbox (xmin, xmax, ymin, ymax, zmin, zmax) = ({})".format(tmp_vbbox))
             del growth_xyz
         else:
-            print("Already enough background!")
+            print("      Already enough background!")
 
-        print("Expanded vbbox: {}".format(tmp_vbbox))
+        print("    Expanded vbbox: {}".format(tmp_vbbox))
         return tmp_vbbox
 
 
@@ -453,9 +453,9 @@ class PhysicianDeltaExpansion(ExpansionStrategy):
         # Defining a dictionary with function to expand the vbbox.
         fc_dict = {0: super().zero, 1: super().one, 2: super().two, 3: super().three, 4: super().four, 5: super().five}
 
-        print("   expand in x-, x+, y-, y+, z-, z+: {}, {}, {}, {}, {}, {}".format(Xn1, Xn2, Ym1, Ym2, Zq1, Zq2))
-        print("   growth in x, y, z: {}, {}, {}".format(self.growth_x, self.growth_y, self.growth_z))
-        print("   tmp_vbbox (xmin, xmax, ymin, ymax, zmin, zmax) = ({})".format(tmp_vbbox))
+        print("      expand in x-, x+, y-, y+, z-, z+: {}, {}, {}, {}, {}, {}".format(Xn1, Xn2, Ym1, Ym2, Zq1, Zq2))
+        print("      growth in x, y, z: {}, {}, {}".format(self.growth_x, self.growth_y, self.growth_z))
+        print("      tmp_vbbox (xmin, xmax, ymin, ymax, zmin, zmax) = ({})".format(tmp_vbbox))
 
         stop = False
         total_Xn1 = 0   # x-
@@ -520,7 +520,7 @@ class PhysicianDeltaExpansion(ExpansionStrategy):
                 growth_xyz[5] = False
 
 
-            print("NEW tmp_vbbox (xmin, xmax, ymin, ymax, zmin, zmax) = ({})".format(tmp_vbbox))
+            print("      NEW tmp_vbbox (xmin, xmax, ymin, ymax, zmin, zmax) = ({})".format(tmp_vbbox))
 
 
             if not np.any(growth_xyz):

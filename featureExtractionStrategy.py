@@ -113,8 +113,8 @@ class FeatureExtractionStrategy(ABC):
 
 
 class RadiomicClass(FeatureExtractionStrategy):
-    def __init__(self, name, csvFilePath, sep, encoding):
-        self.csvFilePath = csvFilePath
+    def __init__(self, name, csvPath, sep, encoding):
+        self.csvPath = csvPath
         self.sep = sep
         self.enconding = encoding
         self.maskITK = None
@@ -135,62 +135,79 @@ class RadiomicClass(FeatureExtractionStrategy):
         print('Enabled filters:\n\t', OrderedDict(sorted(self.extractor._enabledImagetypes.items())))
         print('Enabled features:\n\t', OrderedDict(sorted(self.extractor._enabledFeatures.items())))
 
-    def appendDFToCSV_void(self, df, csvFilePath, sep=",", encoding='utf-8'):
-        if not os.path.isfile(csvFilePath):
-            df.to_csv(csvFilePath, mode='a', index=False, sep=sep, encoding=encoding)
-        elif len(df.columns) != len(pd.read_csv(csvFilePath, nrows=1, sep=sep).columns):
+    def appendDFToCSV_void(self, df, csvFilename, sep=",", encoding='utf-8'):
+        if not os.path.isfile(csvFilename):
+            df.to_csv(csvFilename, mode='a', index=False, sep=sep, encoding=encoding)
+        elif len(df.columns) != len(pd.read_csv(csvFilename, nrows=1, sep=sep).columns):
+            print("Columns do not match!!")
             raise Exception("Columns do not match!! Dataframe has " + str(len(df.columns)) +
                             " columns. CSV file has " +
-                            str(len(pd.read_csv(csvFilePath, nrows=1, sep=sep).columns))
+                            str(len(pd.read_csv(csvFilename, nrows=1, sep=sep).columns))
                             + " columns.")
-        elif not (df.columns == pd.read_csv(csvFilePath, nrows=1, sep=sep).columns).all():
+        elif not (df.columns == pd.read_csv(csvFilename, nrows=1, sep=sep).columns).all():
+            print("Columns and column order of dataframe and csv file do not match!!")
             raise Exception("Columns and column order of dataframe and csv file do not match!!")
         else:
-            df.to_csv(csvFilePath, mode='a', index=False, sep=sep, encoding=encoding, header=False)
+            df.to_csv(csvFilename, mode='a', index=False, sep=sep, encoding=encoding, header=False)
 
 
 
-    def featureExtraction(self, array, origin, spacing, direction):
-        print("Using Radiomic to extract features...")
+    def featureExtraction(self, array, mask, image_filename, mask_filename, caseID, lessionID, origin, spacing, direction):
+        print("      Using Radiomic to extract features...")
 
         assert type(array).__module__ == np.__name__, "Error, expected a numpy object."
         assert array.ndim == 6, "Error, the array's dimension must be equal to 6."
 
-        max_i, max_j, max_k = array.shape[:3]
+        max_z, max_x, max_y = array.shape[:3]
 
-        print("Extracting new {} rows of features.".format(max_i * max_j * max_k))
+        print("      max_z: {}, max_x: {}, max_y: {}".format(max_z, max_x, max_y))
+        print("      Extracting new {} rows of features.".format(max_z * max_x * max_y))
 
         mydict = []
-        for i in range(max_i):
-            for j in range(max_j):
-                for k in range(max_k):
+        for x in range(max_x):  # x: row
+            for y in range(max_y):  # y: column
+                for z in range(max_z):  # z: deep
 
-                    # if i == 0 and j == 1 and k == 21:
-
-                    volume = array[i, j, k]
+                    volume = array[z, x, y]     # get a cube from the array.
                     imageITK = sitk.GetImageFromArray(volume)
 
                     imageITK.origin = origin
                     imageITK.spacing = spacing
                     imageITK.direction = direction
 
-                    # print("i={}, j={}, k={}".format(i, j, k))
-
+                    new_row = {}
 
                     featureVector = self.extractor.execute(imageITK, self.maskITK)  # allways is used the same mask
                     # print("Result type: {} and length: {}".format(type(featureVector), len(featureVector)))  # result is returned in a Python ordered dictionary)
                     # print('')
                     # print('Calculated features')
-
-                    # Show output
-                    new_row = {}
                     for featureName in featureVector.keys():  # Note that featureVectors is a 'disordered dictionary'
                         # print('Computed %s: %s' % (featureName, featureVector[featureName]))
                         # print(featureVector[featureName])
-                        if ('firstorder' in featureName) or ('glszm' in featureName):
+                        if ('firstorder' in featureName) or ('glszm' in featureName) or \
+                            ('glcm' in featureName) or ('glrlm' in featureName) or \
+                            ('gldm' in featureName):
                             new_row.update({featureName: featureVector[featureName]})
 
-                    od = OrderedDict(sorted(new_row.items()))  # Ordering the new_row dictionary
+                    lst = sorted(new_row.items()) # Ordering the new_row dictionary
+
+                    # Adding some columns and values at the front of the list
+                    label_value = mask[z, x, y]
+                    lst.insert(0, ('label', label_value))
+                    lst.insert(0, ('axisZ', z))
+                    lst.insert(0, ('axisY', y))
+                    lst.insert(0, ('axisX', x))
+                    # flattened_index = np.ravel_multi_index([[z], [y], [x]], (3, 3, 3), order='F')
+                    #                 np.ravel_multi_index([[2],[1],[0]],rw.shape[:3])
+                    [flattened_index] = np.ravel_multi_index([[x], [y], [z]], (max_x, max_y, max_z))  # order='C'
+                    lst.insert(0, ('flattened_index', int(flattened_index)))
+                    lst.insert(0, ('lessionID', lessionID))
+                    lst.insert(0, ('caseID', caseID))
+                    lst.insert(0, ('mask_filename', mask_filename))
+                    lst.insert(0, ('image_filename', image_filename))
+
+
+                    od = OrderedDict(lst)
                     # for name in od.keys():
                     #     print('Computed %s: %s' % (name, od[name]))
 
@@ -198,8 +215,11 @@ class RadiomicClass(FeatureExtractionStrategy):
                     mydict.append(od)
 
         df = pd.DataFrame.from_dict(mydict)
-        self.appendDFToCSV_void(df=df, csvFilePath=self.csvFilePath, sep=self.sep, encoding=self.enconding)
-        print("Rows appended to: {}".format(self.csvFilePath))
+
+        # preparing the path + filename + '.csv'
+        csvFilename = os.path.join(self.csvPath, image_filename.split('.')[0] + '.csv')
+        self.appendDFToCSV_void(df=df, csvFilename=csvFilename, sep=self.sep, encoding=self.enconding)
+        print("      {} rows appended to: {}".format(len(df), csvFilename))
 
 
 

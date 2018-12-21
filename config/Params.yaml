@@ -34,4 +34,8 @@ featureClass:
   # redundant Compactness 1, Compactness 2 an Spherical Disproportion features are disabled by default, they can be
   # enabled by specifying individual feature names (as is done for glcm) and including them in the list.
   firstorder: [] # specifying an empty list has the same effect as specifying nothing.
-  glszm:
+  glcm: []
+  glszm: []
+  glrlm: []
+  gldm: []
+ 

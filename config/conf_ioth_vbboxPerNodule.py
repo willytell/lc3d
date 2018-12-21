@@ -1,11 +1,19 @@
 # DB TYPE
-#db_type                = "COMPRESSED NIFTY"   # [ "DICOM" | "NIFTY" | "COMPRESSED NIFTY"]
+#db_type                = "COMPRESSED NIFTI"   # [ "DICOM" | "NIFTI" | "COMPRESSED NIFTI"]
 
 
 # DB SOURCE PATHS
 src_image_path          = "/media/willytell/TOSHIBA EXT/LungCTDataBase/LIDC-IDRI/Nii_Vol/CT_nii"
 src_mask_path           = "/media/willytell/TOSHIBA EXT/LungCTDataBase/LIDC-IDRI/Nii_Vol/CTmask_nii"
 
+# Set internal_input = 1 if image and mask have the following string pattern:
+#  Image filename: LIDC-IDRI-0001_GT1.nii.gz
+#  Mask filename:  LIDC-IDRI-0001_GT1_Mask.nii.gz
+# OR
+# Set internal_input = 2 if image and mask have the following string pattern:
+#  Image filename: LIDC-IDRI-0001_GT1_1.nii.gz
+#  Mask filename:  LIDC-IDRI-0001_GT1_1_Mask.nii.gz
+internal_input          = 1
 
 mask_pattern            = '*.nii.gz'
 
@@ -37,7 +45,7 @@ physicianDelta_growth_y = 1
 physicianDelta_growth_z = 1
 
 # random delta
-physicianDelta_delta_x  = [1, 1]        # [None | [deltaX1, deltaX2]] => used to [(expandX1 +/- deltaX1), (expandX2 +/- deltaX2)]
+physicianDelta_delta_x  = None #[1, 1]        # [None | [deltaX1, deltaX2]] => used to [(expandX1 +/- deltaX1), (expandX2 +/- deltaX2)]
 physicianDelta_delta_y  = [5, 5]
 physicianDelta_delta_z  = [5, 5]
 

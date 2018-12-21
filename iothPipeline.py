@@ -1,8 +1,8 @@
 import time
-from input import NiftyManagementPlugin
+from input import NiftiManagementPlugin
 from utils import get_components
-from plugin import LabelPlugin, VolumeBBoxPlugin, ExpandVBBoxPlugin, SaveVBBoxNiftyPlugin
-from expansionStrategy import GrowInAnyDirection, Uniform, Bg_pExpansion, PhysicianDeltaExpansion
+from plugin import LabelPlugin, VolumeBBoxPlugin, ExpandVBBoxPlugin, SaveVBBoxNiftiPlugin
+from expansionStrategy import AnyExpansion, UniformExpansion, Bg_pExpansion, PhysicianDeltaExpansion
 import sys
 
 
@@ -15,13 +15,19 @@ class iothVBBoxPerNodulePipeline(Pipeline):
 
     def build_stack(self):
         # Plugin NiftyManagement
-        myNiftyManagement = NiftyManagementPlugin('CT', None, self.config.src_image_path, self.config.src_mask_path,
-                                                  self.config.mask_pattern, self.config.dst_image_path, self.config.dst_mask_path, internal=1)
-        myNiftyManagement.masks2read()
-        self.plugins_stack.append(myNiftyManagement)
+        myNiftiManagement = NiftiManagementPlugin('CT',
+                                                  None,
+                                                  self.config.src_image_path,
+                                                  self.config.src_mask_path,
+                                                  self.config.mask_pattern,
+                                                  self.config.dst_image_path,
+                                                  self.config.dst_mask_path,
+                                                  internal=self.config.internal_input)
+        myNiftiManagement.masks2read()
+        self.plugins_stack.append(myNiftiManagement)
 
         # Plugin Labeling
-        myLabeling = LabelPlugin('CT_mask_labeled', [myNiftyManagement.name])
+        myLabeling = LabelPlugin('CT_mask_labeled', [myNiftiManagement.name])
         dim_x, dim_y, dim_z = get_components(self.config.labeling_se_dim)
         myLabeling.set_structure_element(dim_x, dim_y, dim_z)
         self.plugins_stack.append(myLabeling)
@@ -52,7 +58,7 @@ class iothVBBoxPerNodulePipeline(Pipeline):
 
 
         # Plugin SaveVBBoxNifty
-        mySaveVBBoxNifty = SaveVBBoxNiftyPlugin('SaveVBBoxNifty', [myNiftyManagement.name, myExpandVBBoxOne.name], self.config.dst_image_path, self.config.dst_mask_path)
+        mySaveVBBoxNifty = SaveVBBoxNiftiPlugin('SaveVBBoxNifty', [myNiftiManagement.name, myExpandVBBoxOne.name], self.config.dst_image_path, self.config.dst_mask_path)
         self.plugins_stack.append(mySaveVBBoxNifty)
 
     def run(self):
@@ -73,7 +79,8 @@ class iothVBBoxPerNodulePipeline(Pipeline):
 def debug_test():
     from configuration import Configuration
 
-    config = Configuration("config/conf_ioth_vbboxPerNodule.py", "extract features").load()
+    #config = Configuration("config/conf_ioth_vbboxPerNodule.py", "extract features").load()
+    config = Configuration("config/conf_vbboxPerNodule.py", "extract features").load()
 
     my_iothVBBoxPerNoduleProcessing = iothVBBoxPerNodulePipeline('iothVBBoxPerNodulePipeline', config)
     my_iothVBBoxPerNoduleProcessing.build_stack()

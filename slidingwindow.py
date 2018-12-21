@@ -57,7 +57,7 @@ class SlidingWindow():
 
     def real_rolling_window(self, array, window = (0,), asteps = None, wsteps = None, axes = None, toend = True):
         """
-        All the credits for this function to Sebastian Berg, https://gist.github.com/seberg/3430219
+        Credits of this function to Sebastian Berg, https://gist.github.com/seberg/3430219
 
         Create a view of `array` which for every point gives the n-dimensional
         neighbourhood of size window. New dimensions are added at the end of
