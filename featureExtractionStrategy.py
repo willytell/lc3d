@@ -113,8 +113,9 @@ class FeatureExtractionStrategy(ABC):
 
 
 class RadiomicClass(FeatureExtractionStrategy):
-    def __init__(self, name, csvPath, sep, encoding):
-        self.csvPath = csvPath
+    def __init__(self, name, path, outputFormat, sep, encoding):
+        self.path = path
+        self.outputFormat = outputFormat    # '[csv' | 'xls']
         self.sep = sep
         self.enconding = encoding
         self.maskITK = None
@@ -136,6 +137,7 @@ class RadiomicClass(FeatureExtractionStrategy):
         print('Enabled features:\n\t', OrderedDict(sorted(self.extractor._enabledFeatures.items())))
 
     def appendDFToCSV_void(self, df, csvFilename, sep=",", encoding='utf-8'):
+        """Append new rows to a new o existing .csv file."""
         if not os.path.isfile(csvFilename):
             df.to_csv(csvFilename, mode='a', index=False, sep=sep, encoding=encoding)
         elif len(df.columns) != len(pd.read_csv(csvFilename, nrows=1, sep=sep).columns):
@@ -216,13 +218,26 @@ class RadiomicClass(FeatureExtractionStrategy):
 
         df = pd.DataFrame.from_dict(mydict)
 
-        # preparing the path + filename + '.csv'
-        csvFilename = os.path.join(self.csvPath, image_filename.split('.')[0] + '.csv')
-        self.appendDFToCSV_void(df=df, csvFilename=csvFilename, sep=self.sep, encoding=self.enconding)
-        print("      {} rows appended to: {}".format(len(df), csvFilename))
+        filename = os.path.join(self.path, image_filename.split('.')[0])
+        if self.outputFormat == 'csv':
+            filename += '.csv'
 
+            if not os.path.isfile(filename):
+                df.to_csv(filename, index=False, sep=self.sep, encoding=self.encoding)
+            else:
+                print("Error: there is already a file named {}. Remove it!!".format(filename))
+                raise Exception("There is already a file named {}. Remove it!!!!")
 
+        elif self.outputFormat == 'xls':
+            filename += '.xls'
+            if not os.path.isfile(filename):
+                df.to_excel(filename, sheet_name='Sheet1', index=False)
+            else:
+                print("Error: there is already a file named {}. Remove it!!".format(filename))
+                raise Exception("There is already a file named {}. Remove it!!!!")
 
+        # self.appendDFToCSV_void(df=df, csvFilename=csvFilename, sep=self.sep, encoding=self.enconding)
+        print("      Writing {} rows to: {}".format(len(df), filename))
 
 
 

@@ -131,9 +131,15 @@ class FeatureExtractionPipeline(Pipeline):
                                         axes=None,
                                         toend=True)
 
-        myRadiomic = RadiomicClass('Radiomic', self.config.csvPath, self.config.sep, self.config.encoding)
+        myRadiomic = RadiomicClass('Radiomic',
+                                   self.config.radiomicOutputPath,
+                                   self.config.radiomicOuputFormat,
+                                   self.config.sep,
+                                   self.config.encoding)
+
         myRadiomic.build_mask_trick(self.config.window_size)
         myRadiomic.build_extractor(self.config.radiomicConfigFile)
+
         mySlidingWindowPlugin = SlidingWindowPlugin('SlidingWindow', [myNiftiManagement.name],
                                                     slidingWindow=mySlidingWindow,
                                                     strategy=myRadiomic)

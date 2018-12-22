@@ -45,7 +45,7 @@ class LabelPlugin(Plugin):
         # self.input_key[0] equal to 'CT'
         if self.input_key[0] in data:
             print("    {} is a present key in the data dictionary".format(self.input_key[0]))
-            _, self.mask = data[self.input_key[0]]
+            _, self.mask = data[self.input_key[0]][:2]
 
             self.labeled, self.ncomponents = label(self.mask.volume, self.structure_element)
             print("    Labeling labeled ncomponents: {}".format(self.ncomponents))
@@ -200,7 +200,7 @@ class SaveVBBoxNiftiPlugin(Plugin):
         if (self.input_key[0] in data) and (self.input_key[1] in data):
             print("    {} and {} are present keys in the data dictionary".format(self.input_key[0], self.input_key[1]))
 
-            image, mask = data[self.input_key[0]]
+            image, mask = data[self.input_key[0]][:2]
             vbbox_list = data[self.input_key[1]]
 
             # check image and mask must be object from MyNifti class.

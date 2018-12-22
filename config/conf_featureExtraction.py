@@ -62,16 +62,9 @@ radiomicConfigFile      = "/home/willytell/Documentos/PhD/lc3d/config/Params.yam
 #radiomicLogPath         = "/home/willytell/Documentos/PhD/lc3d/log"
 
 # Radiomic output file and its config
-#csvFilePath             = "/home/willytell/Documentos/PhD/lc3d/output/LIDC-IDRI-0001_GT1_1.csv"
-#csvFilePath             = "/home/willytell/Documentos/PhD/lc3d/output/LIDC-IDRI-0002_GT1_1.csv"
-#csvFilePath             = "/home/willytell/Documentos/PhD/lc3d/output/LIDC-IDRI-0015_GT1_1.csv"
-#csvFilePath             = "/home/willytell/Documentos/PhD/lc3d/output/LIDC-IDRI-0016_GT1_1.csv"
-#csvFilePath             = "/home/willytell/Documentos/PhD/lc3d/output/LIDC-IDRI-0016_GT1_2.csv"
-#csvFilePath             = "/home/willytell/Documentos/PhD/lc3d/output/LIDC-IDRI-0016_GT1_3.csv"
-#csvFilePath             = "/home/willytell/Documentos/PhD/lc3d/output/LIDC-IDRI-0016_GT1_4.csv"
-#csvFilePath             = "/home/willytell/Documentos/PhD/lc3d/output/LIDC-IDRI-0016_GT1_5.csv"
-csvPath                 = "/home/willytell/Documentos/PhD/lc3d/output"
+radiomicOutputPath      = "/home/willytell/Documentos/PhD/lc3d/output"
 #csvFilePath             = "/home/willytell/Documentos/PhD/lc3d/output/test.csv"
+radiomicOuputFormat     = 'xls'         # ['csv' | 'xls']
 sep                     = ";"
 encoding                = "utf-8"
 
