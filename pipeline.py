@@ -157,10 +157,10 @@ class FeatureExtractionPipeline(Pipeline):
 
 
         # Plugin SaveFeaturesPlugin
-        mySaveFeaturesPluginXLS = SaveFeaturesPlugin('SaveFeaturesXLS',
+        mySaveFeaturesPluginXLS = SaveFeaturesPlugin('SaveFeaturesXLSX',
                                                   [myNiftiManagementPlugin.name, mySlidingWindowPlugin.name],
                                                   self.config.radiomicOutputPath,
-                                                  'xls', #self.config.radiomicOutputFormat
+                                                  'xlsx', #self.config.radiomicOutputFormat
                                                   None, #self.config.sep,
                                                   None) #self.config.encoding
         self.plugins_stack.append(mySaveFeaturesPluginXLS)

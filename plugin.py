@@ -374,10 +374,15 @@ class SaveFeaturesPlugin(Plugin):
                         print("Error: there is already a file named {}. Remove it!!".format(filename))
                         raise Exception("There is already a file named {}. Remove it!!!!")
                 # XLS format
-                elif self.outputFormat == 'xls':
-                    filename += '.xls'
+                elif self.outputFormat == 'xlsx':
+                    filename += '.xlsx'
                     if not os.path.isfile(filename):
-                        df.to_excel(filename, sheet_name='Sheet1', index=False)
+                        # Create a Pandas Excel writer using XlsxWriter as the engine.
+                        writer = pd.ExcelWriter(filename, engine='xlsxwriter')
+                        # Convert the dataframe to an XlsxWriter Excel object.
+                        df.to_excel(writer, sheet_name='Sheet1')
+                        # Close the Pandas Excel writer and output the Excel file.
+                        writer.save()
                     else:
                         print("Error: there is already a file named {}. Remove it!!".format(filename))
                         raise Exception("There is already a file named {}. Remove it!!!!".format(filename))
