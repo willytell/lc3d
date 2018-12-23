@@ -24,6 +24,9 @@ class NiftiFormat(ImageFormat):
         self.volume = None
         self.path = None
         self.filename = None
+        self.caseID = -1  # -1 means Not assigned yet
+        self.lessionID = -1  # -1 means Not assigned yet
+
         super().__init__()
 
     def read(self, path, filename):

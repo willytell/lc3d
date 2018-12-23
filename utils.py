@@ -14,4 +14,5 @@ def get_dst_filename_nifti(filename, label):
     name_splitted = filename.split('.')[0].split('_')
     mask_filename = name_splitted[0] + '_' + name_splitted[1] + '_' + str(label) + '_' + name_splitted[2] + '.nii.gz'
     image_filename = name_splitted[0] + '_' + name_splitted[1] + '_' + str(label) + '.nii.gz'
+
     return image_filename, mask_filename

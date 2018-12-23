@@ -80,7 +80,7 @@ def debug_test():
     from configuration import Configuration
 
     #config = Configuration("config/conf_ioth_vbboxPerNodule.py", "extract features").load()
-    config = Configuration("config/conf_vbboxPerNodule.py", "extract features").load()
+    config = Configuration("config/conf_part1.py", "extract features").load()
 
     my_iothVBBoxPerNoduleProcessing = iothVBBoxPerNodulePipeline('iothVBBoxPerNodulePipeline', config)
     my_iothVBBoxPerNoduleProcessing.build_stack()

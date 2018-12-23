@@ -23,8 +23,8 @@ internal_input          = 1
 mask_pattern            = '*.nii.gz'
 
 # OUTPUT PATHS
-dst_image_path          = "/home/willytell/Escritorio/LungCTDataBase/lc3d/Nii_Vol/CTRoi_nii"
-dst_mask_path           = "/home/willytell/Escritorio/LungCTDataBase/lc3d/Nii_Vol/CTRoimask_nii"
+dst_image_path          = "/home/willytell/Escritorio/LungCTDataBase/preprocessed/Nii_Vol/CTRoi_nii"
+dst_mask_path           = "/home/willytell/Escritorio/LungCTDataBase/preprocessed/Nii_Vol/CTRoimask_nii_part1"
 
 
 # Labeling
@@ -39,7 +39,7 @@ uniform_limit           = 1             # Uniform Expansion: limit in each direc
 
 # Bg_pExpansion
 background_p            = 50
-groundtruth_p           = 40
+groundtruth_p           = 50
 bg_p_nvoxels            = 1             # Bg_p Expansion: amount of voxels to increment in each step.
 check_bg_percentage     = True          # Check the background percentage during the expansion
 

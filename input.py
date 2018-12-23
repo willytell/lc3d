@@ -87,13 +87,15 @@ class NiftiManagementPlugin(Plugin):
         #self.name equal to 'CT'
         if data.get(self.name) is not None:  # if already exist
             data.pop(self.name)  # remove item
-            print("    Removing to data: '{}':[image, mask]".format(self.name))
+            print("    Removing from data: '{}':[image, mask]".format(self.name))
 
         if self.index < len(self.src_mask_list):
             # read the mask file
             self.mask = NiftiFormat()
             self.mask_filename = self.src_mask_list[self.index]
             self.mask.read(self.src_mask_path, self.mask_filename)
+            self.mask.caseID = self.caseID
+            self.mask.lessionID = self.lessionID
             self.mask.image2array()
             print("    Mask shape:  {}".format(self.mask.volume.shape))
 
@@ -101,20 +103,22 @@ class NiftiManagementPlugin(Plugin):
             self.image = NiftiFormat()
             self.image_filename = self.get_image_filename(self.mask_filename)
             self.image.read(self.src_image_path, self.image_filename)
+            self.image.caseID = self.caseID
+            self.image.lessionID = self.lessionID
             self.image.image2array()
             print("    Image shape: {}".format(self.image.volume.shape))
 
             assert self.image.volume.shape == self.mask.volume.shape, "    In NiftiManagement, it is supposed that image's volume and mask's volume should have the same shape."
 
             # add item
-            data[self.name] = [self.image, self.mask, self.image_filename, self.mask_filename, self.caseID, self.lessionID]
-            print("    Adding to data: '{}':[image, mask, image_filename, mask_filename, caseID, lessionID]".format(self.name))
+            data[self.name] = [self.image, self.mask]
+            print("    Adding to data: '{}':[image, mask]".format(self.name))
 
             self.index += 1  # increment the index for the next file to be read.
             return True
 
         else:
-            print("All the masks and images have been processed.")
+            print("    All the masks and images have been processed.")
             return False
 
 

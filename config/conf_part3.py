@@ -4,12 +4,12 @@
 
 # DB SOURCE PATHS
 # External storage
-src_image_path          = "/media/willytell/TOSHIBA EXT/LungCTDataBase/LIDC-IDRI/Nii_Vol/CT_nii"
-src_mask_path           = "/media/willytell/TOSHIBA EXT/LungCTDataBase/LIDC-IDRI/Nii_Vol/CTmask_nii"
+#src_image_path          = "/media/willytell/TOSHIBA EXT/LungCTDataBase/LIDC-IDRI/Nii_Vol/CT_nii"
+#src_mask_path           = "/media/willytell/TOSHIBA EXT/LungCTDataBase/LIDC-IDRI/Nii_Vol/CTmask_nii"
 
 # Local storage
-#src_image_path          = "/home/willytell/Escritorio/LungCTDataBase/TMP/Nii_Vol/CTRoi_nii"
-#src_mask_path           = "/home/willytell/Escritorio/LungCTDataBase/TMP/Nii_Vol/CTRoimask_nii_parte2"
+src_image_path          = "/home/willytell/Escritorio/LungCTDataBase/preprocessed/Nii_Vol/CTRoi_nii"
+src_mask_path           = "/home/willytell/Escritorio/LungCTDataBase/preprocessed/Nii_Vol/CTRoimask_nii_part2"
 
 # Set internal_input = 1 if image and mask have the following string pattern:
 #  Image filename: LIDC-IDRI-0001_GT1.nii.gz
@@ -18,7 +18,7 @@ src_mask_path           = "/media/willytell/TOSHIBA EXT/LungCTDataBase/LIDC-IDRI
 # Set internal_input = 2 if image and mask have the following string pattern:
 #  Image filename: LIDC-IDRI-0001_GT1_1.nii.gz
 #  Mask filename:  LIDC-IDRI-0001_GT1_1_Mask.nii.gz
-internal_input          = 1
+internal_input          = 2
 
 mask_pattern            = '*.nii.gz'
 
@@ -39,7 +39,7 @@ uniform_limit           = 1             # Uniform Expansion: limit in each direc
 
 # Bg_pExpansion
 background_p            = 50
-groundtruth_p           = 40
+groundtruth_p           = 50
 bg_p_nvoxels            = 1             # Bg_p Expansion: amount of voxels to increment in each step.
 check_bg_percentage     = True          # Check the background percentage during the expansion
 

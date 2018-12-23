@@ -3,7 +3,7 @@ import time
 from abc import ABC, abstractmethod
 from input import NiftiManagementPlugin
 from utils import get_components
-from plugin import LabelPlugin, VolumeBBoxPlugin, ExpandVBBoxPlugin, SaveVBBoxNiftiPlugin, SlidingWindowPlugin
+from plugin import LabelPlugin, VolumeBBoxPlugin, ExpandVBBoxPlugin, SaveVBBoxNiftiPlugin, SlidingWindowPlugin, SaveFeaturesPlugin
 from expansionStrategy import UniformExpansion, Bg_pExpansion
 from slidingwindow import SlidingWindow
 from featureExtractionStrategy import RadiomicClass
@@ -87,7 +87,11 @@ class VBBoxPerNodulePipeline(Pipeline):
         self.plugins_stack.append(myExpandVBBoxTwo)
 
         # Plugin SaveVBBoxNifti
-        mySaveVBBoxNifti = SaveVBBoxNiftiPlugin('SaveVBBoxNifti', [myNiftiManagement.name, myExpandVBBoxTwo.name], self.config.dst_image_path, self.config.dst_mask_path)
+        mySaveVBBoxNifti = SaveVBBoxNiftiPlugin('SaveVBBoxNifti',
+                                                [myNiftiManagement.name, myExpandVBBoxTwo.name],
+                                                self.config.dst_image_path,
+                                                self.config.dst_mask_path,
+                                                internal = self.config.internal_input)
         self.plugins_stack.append(mySaveVBBoxNifti)
 
     def run(self):
@@ -111,7 +115,7 @@ class FeatureExtractionPipeline(Pipeline):
 
     def build_stack(self):
         # Plugin NiftiManagement
-        myNiftiManagement = NiftiManagementPlugin('CT',
+        myNiftiManagementPlugin = NiftiManagementPlugin('CT',
                                                   None,
                                                   self.config.src_image_path,
                                                   self.config.src_mask_path,
@@ -119,8 +123,8 @@ class FeatureExtractionPipeline(Pipeline):
                                                   self.config.dst_image_path,
                                                   self.config.dst_mask_path,
                                                   internal=self.config.internal_input)
-        myNiftiManagement.masks2read()
-        self.plugins_stack.append(myNiftiManagement)
+        myNiftiManagementPlugin.masks2read()
+        self.plugins_stack.append(myNiftiManagementPlugin)
 
         # Plugin SlidingWindowPlugin
         winSize = self.config.window_size
@@ -131,19 +135,54 @@ class FeatureExtractionPipeline(Pipeline):
                                         axes=None,
                                         toend=True)
 
-        myRadiomic = RadiomicClass('Radiomic',
-                                   self.config.radiomicOutputPath,
-                                   self.config.radiomicOuputFormat,
-                                   self.config.sep,
-                                   self.config.encoding)
+        myRadiomic = RadiomicClass('Radiomic')
 
         myRadiomic.build_mask_trick(self.config.window_size)
         myRadiomic.build_extractor(self.config.radiomicConfigFile)
 
-        mySlidingWindowPlugin = SlidingWindowPlugin('SlidingWindow', [myNiftiManagement.name],
+        mySlidingWindowPlugin = SlidingWindowPlugin('SlidingWindowPlugin',
+                                                    [myNiftiManagementPlugin.name],
                                                     slidingWindow=mySlidingWindow,
                                                     strategy=myRadiomic)
         self.plugins_stack.append(mySlidingWindowPlugin)
+
+        # Plugin SaveFeaturesPlugin
+        mySaveFeaturesPluginCSV = SaveFeaturesPlugin('SaveFeaturesCSV',
+                                                     [myNiftiManagementPlugin.name, mySlidingWindowPlugin.name],
+                                                     self.config.radiomicOutputPath,
+                                                     'csv',  # self.config.radiomicOutputFormat
+                                                     ';',  # self.config.sep,
+                                                     'utf-8')  # self.config.encoding
+        self.plugins_stack.append(mySaveFeaturesPluginCSV)
+
+
+        # Plugin SaveFeaturesPlugin
+        mySaveFeaturesPluginXLS = SaveFeaturesPlugin('SaveFeaturesXLS',
+                                                  [myNiftiManagementPlugin.name, mySlidingWindowPlugin.name],
+                                                  self.config.radiomicOutputPath,
+                                                  'xls', #self.config.radiomicOutputFormat
+                                                  None, #self.config.sep,
+                                                  None) #self.config.encoding
+        self.plugins_stack.append(mySaveFeaturesPluginXLS)
+
+        # Plugin SaveFeaturesPlugin
+        mySaveFeaturesPluginNPZ = SaveFeaturesPlugin('SaveFeaturesNPZ',
+                                                  [myNiftiManagementPlugin.name, mySlidingWindowPlugin.name],
+                                                  self.config.radiomicOutputPath,
+                                                  'npz',  # 'xls', #self.config.radiomicOutputFormat
+                                                  None,  # self.config.sep,
+                                                  None)  # self.config.encoding
+        self.plugins_stack.append(mySaveFeaturesPluginNPZ)
+
+        # Plugin SaveFeaturesPlugin
+        mySaveFeaturesPluginMATLAB = SaveFeaturesPlugin('SaveFeaturesMATLAB',
+                                                     [myNiftiManagementPlugin.name, mySlidingWindowPlugin.name],
+                                                     self.config.radiomicOutputPath,
+                                                     'mat',  # 'xls', #self.config.radiomicOutputFormat
+                                                     None,  # self.config.sep,
+                                                     None)  # self.config.encoding
+        self.plugins_stack.append(mySaveFeaturesPluginMATLAB)
+
 
     def run(self):
         print("Running FeatureExtractionProcessing...")
@@ -163,7 +202,7 @@ class FeatureExtractionPipeline(Pipeline):
 # def debug_test():
 #     from configuration import Configuration
 #
-#     config = Configuration("config/conf_vbboxPerNodule.py", "extract features").load()
+#     config = Configuration("config/conf_part3.py", "ROI").load()
 #
 #     myVBBoxPerNoduleProcessing = VBBoxPerNodulePipeline('VBBoxPerNodulePipeline', config)
 #     myVBBoxPerNoduleProcessing.build_stack()
@@ -172,7 +211,7 @@ class FeatureExtractionPipeline(Pipeline):
 def debug_test():
     from configuration import Configuration
 
-    config = Configuration("config/conf_featureExtraction.py", "extract features").load()
+    config = Configuration("config/conf_part4.py", "extract features").load()
 
     myFeatureExtractionPipeline = FeatureExtractionPipeline('FeatureExtractionProcessing', config)
     myFeatureExtractionPipeline.build_stack()

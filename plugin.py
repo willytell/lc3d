@@ -1,13 +1,16 @@
 import SimpleITK as sitk
 import numpy as np
+import pandas as pd
 import os
+import scipy.io as sio  # to save matlab files (.mat)
 
 from configuration import Configuration
 from abc import ABC, abstractmethod
 from scipy.ndimage.measurements import label
 from imageFormat import NiftiFormat
 from utils import get_dst_filename_nifti
-from slidingwindow import SlidingWindow
+from collections import OrderedDict
+
 
 class Plugin(ABC):
     def __init__(self, name, input_key):
@@ -40,12 +43,12 @@ class LabelPlugin(Plugin):
         # if already exist an item, then remove it.
         if data.get(self.name) is not None:
             data.pop(self.name)
-            print("    Removing to data: '{}':[labeled, ncomponents]".format(self.name))
+            print("    Removing from data: '{}':[labeled, ncomponents]".format(self.name))
 
         # self.input_key[0] equal to 'CT'
         if self.input_key[0] in data:
             print("    {} is a present key in the data dictionary".format(self.input_key[0]))
-            _, self.mask = data[self.input_key[0]][:2]
+            _, self.mask = data[self.input_key[0]]
 
             self.labeled, self.ncomponents = label(self.mask.volume, self.structure_element)
             print("    Labeling labeled ncomponents: {}".format(self.ncomponents))
@@ -87,7 +90,7 @@ class VolumeBBoxPlugin(Plugin):
         # if already exist an item, then remove it.
         if data.get(self.name) is not None:
             data.pop(self.name)
-            print("    Removeing to data: '{}':vbbox_list".format(self.name))
+            print("    Removing from data: '{}':vbbox_list".format(self.name))
 
         # self.input_key[0] equal to 'CT_mask_labeled'
         if self.input_key[0] in data:
@@ -146,7 +149,7 @@ class ExpandVBBoxPlugin(Plugin):
         # self.name equal to 'CT_mask_expanded'
         if data.get(self.name) is not None:
             data.pop(self.name)
-            print("    Removeing to data: '{}':expanded_vbbox_list".format(self.name))
+            print("    Removing from data: '{}':expanded_vbbox_list".format(self.name))
 
         self.expanded_vbbox_list = []
 
@@ -183,9 +186,10 @@ class ExpandVBBoxPlugin(Plugin):
 
 
 class SaveVBBoxNiftiPlugin(Plugin):
-    def __init__(self, name, input_key, dst_image_path, dst_mask_path):
+    def __init__(self, name, input_key, dst_image_path, dst_mask_path, internal=1):
         self.dst_image_path = dst_image_path
         self.dst_mask_path = dst_mask_path
+        self.internal=internal
         # self.image = None
         # self.mask = None
         super().__init__(name, input_key)
@@ -200,7 +204,7 @@ class SaveVBBoxNiftiPlugin(Plugin):
         if (self.input_key[0] in data) and (self.input_key[1] in data):
             print("    {} and {} are present keys in the data dictionary".format(self.input_key[0], self.input_key[1]))
 
-            image, mask = data[self.input_key[0]][:2]
+            image, mask = data[self.input_key[0]]
             vbbox_list = data[self.input_key[1]]
 
             # check image and mask must be object from MyNifti class.
@@ -218,7 +222,12 @@ class SaveVBBoxNiftiPlugin(Plugin):
                     expanded_mask.set_properties(properties=mask.get_properties())
 
                     # Get the names for the image and mask
-                    image_fname, mask_fname = get_dst_filename_nifti(mask.filename, label_number)
+                    if self.internal == 2:
+                        image_fname, mask_fname = image.filename, mask.filename
+                    else:
+                        # by default
+                        image_fname, mask_fname = get_dst_filename_nifti(mask.filename, label_number)
+
                     expanded_mask.save(self.dst_mask_path, mask_fname)
 
                     # Image
@@ -240,7 +249,7 @@ class SaveVBBoxNiftiPlugin(Plugin):
 
 
 class SlidingWindowPlugin(Plugin):
-    def __init__(self,name, input_key, slidingWindow, strategy):
+    def __init__(self, name, input_key, slidingWindow, strategy):
         self.slidingWindow = slidingWindow
         self.strategy = strategy
         self.image = None
@@ -252,15 +261,22 @@ class SlidingWindowPlugin(Plugin):
         super().__init__(name, input_key)
 
     def context_interface(self, array, mask, image_filename, mask_filename, caseID, lessionID, origin, spacing, direction):
-        self.strategy.featureExtraction(array, mask, image_filename, mask_filename, caseID, lessionID, origin, spacing, direction)
+        df = self.strategy.featureExtraction(array, mask, image_filename, mask_filename, caseID, lessionID, origin, spacing, direction)
+        return df
 
     def process(self, data):
         print("> SlidingWindow plugin with name: {} using strategy {} ...".format(self.name, self.strategy.name))
 
+        # if already exist an item, then remove it.
+        if data.get(self.name) is not None:
+            data.pop(self.name)
+            print("    Removing from data: '{}':[df]".format(self.name))
+
+
         #self.input_key[0] equal to 'CT'
         if self.input_key[0] in data:
             print("    {} is a present key in the data dictionary".format(self.input_key[0]))
-            self.image, self.mask, self.image_filename, self.mask_filename, self.caseID, self.lessionID = data[self.input_key[0]][:6]  # remember that self.image is a MyNifti object.
+            self.image, self.mask = data[self.input_key[0]]  # remember that self.image is a MyNifti object.
 
             # print("   >> origin: {}".format(self.image.origin))
             # print("   >> spacing: {}".format(self.image.spacing))
@@ -283,10 +299,19 @@ class SlidingWindowPlugin(Plugin):
 
             if little_cubes is not None:
                 # extract features and save them.
-                self.context_interface(little_cubes, self.mask.volume, self.image_filename, self.mask_filename, self.caseID, self.lessionID, self.image.origin, self.image.spacing, self.image.direction)
+                df = self.context_interface(little_cubes, self.mask.volume, self.image.filename, self.mask.filename, self.image.caseID, self.image.lessionID, self.image.origin, self.image.spacing, self.image.direction)
                 #self.strategy.featureExtraction(little_cubes)
+
+                # Add the new item to data
+                data[self.name] = [df]
+                print("    Adding to data: '{}':[df]".format(self.name))
+
             # if little_cube IS None, it's because the window turned out to be larger than the volume, then there's
             # nothing to do or compute.
+            else:
+                data[self.name] = [None]
+                print("    Adding to data: '{}':[None]".format(self.name))
+                print("    Warning: 'lite_cubes' is None.")
 
             return True
 
@@ -294,6 +319,128 @@ class SlidingWindowPlugin(Plugin):
             print("    Error: In the SlidingWindowPlugin, process() method does not found {} key to process.".format(self.input_key[0]))
 
         return False
+
+
+class SaveFeaturesPlugin(Plugin):
+    def __init__(self, name, input_key, dst_path, outputFormat, sep, encoding):
+        self.image = None
+        self.mask = None
+        self.image_filename = ''
+        self.mask_filename = ''
+        self.caseID = -1
+        self.lessionID = -1
+        self.dst_path = dst_path
+        self.outputFormat = outputFormat  # '[csv' | 'xls']
+        self.sep = sep
+        self.encoding = encoding
+        super().__init__(name, input_key)
+
+
+    def appendDFToCSV_void(self, df, csvFilename, sep=";", encoding='utf-8'):
+        """Append new rows to a new or existing .csv file."""
+        if not os.path.isfile(csvFilename):
+            df.to_csv(csvFilename, mode='a', index=False, sep=sep, encoding=encoding)
+        elif len(df.columns) != len(pd.read_csv(csvFilename, nrows=1, sep=sep).columns):
+            print("Columns do not match!!")
+            raise Exception("Columns do not match!! Dataframe has " + str(len(df.columns)) +
+                            " columns. CSV file has " +
+                            str(len(pd.read_csv(csvFilename, nrows=1, sep=sep).columns))
+                            + " columns.")
+        elif not (df.columns == pd.read_csv(csvFilename, nrows=1, sep=sep).columns).all():
+            print("Columns and column order of dataframe and csv file do not match!!")
+            raise Exception("Columns and column order of dataframe and csv file do not match!!")
+        else:
+            df.to_csv(csvFilename, mode='a', index=False, sep=sep, encoding=encoding, header=False)
+
+    def process(self, data):
+        print("> SaveFeatures plugin with name: {} ...".format(self.name))
+
+        # self.input_key[0] equal to 'CT' and self.input_key[0] equal to 'mySlidingWindowPlugin'
+        if (self.input_key[0] in data) and (self.input_key[1] in data):
+            print("    {} is a present key in the data dictionary".format(self.input_key[0]))
+            self.image, self.mask = data[self.input_key[0]]  # remember that self.image is a MyNifti object.
+
+            [df] = data[self.input_key[1]]  # remember that self.image is a MyNifti object.
+
+            filename = os.path.join(self.dst_path, self.image.filename.split('.')[0])
+
+            if df is not None:
+                # CSV format
+                if self.outputFormat == 'csv':
+                    filename += '.csv'
+                    if not os.path.isfile(filename):
+                        df.to_csv(filename, index=False, sep=self.sep, encoding=self.encoding)
+                    else:
+                        print("Error: there is already a file named {}. Remove it!!".format(filename))
+                        raise Exception("There is already a file named {}. Remove it!!!!")
+                # XLS format
+                elif self.outputFormat == 'xls':
+                    filename += '.xls'
+                    if not os.path.isfile(filename):
+                        df.to_excel(filename, sheet_name='Sheet1', index=False)
+                    else:
+                        print("Error: there is already a file named {}. Remove it!!".format(filename))
+                        raise Exception("There is already a file named {}. Remove it!!!!".format(filename))
+                # NPZ numpy array format
+                elif self.outputFormat == 'npz':
+
+                    # TODO: pass by parameters the range of ncols
+                    ncols = list(range(9, 97))
+                    selected = df[df.columns[ncols]]
+
+                    array_lst = []
+                    for col in selected.columns:
+                        #vol = np.zeros(self.mask.volume.shape, dtype=np.float)
+
+                        z, x, y = self.mask.volume.shape
+
+                        feature = df[col]   # <class 'pandas.core.series.Series'>
+                        feature = np.array(feature)  # cast to <class 'numpy.ndarray'>
+                        #print("type(feature): {}".format(type(feature)))
+                        #print("feature.shape: {}".format(feature.shape))
+
+                        index = np.array(df['flattened_index'])  # recover indexes and cast to numpy array.
+
+                        feature2 = 0*feature
+                        feature2[index] = feature
+                        feature2 = feature2.reshape(x, y, z)
+
+                        # if col == 'original_firstorder_90Percentile':
+                        #     print("col '{}': {}".format(col, feature2[0,4,2]))
+                        #     print("col '{}': {}".format(col, feature2[1,0,3]))
+
+                        array = np.copy(feature2)
+
+                        array_lst.append((col, array))
+
+                    od = OrderedDict(array_lst)
+                    np.savez(filename, **od)
+
+                # MATLAB format (.mat)
+                elif self.outputFormat == 'mat':
+                    # It is supposed that already the arrays are saved in .npz file.
+                    try:
+                        npzfile = np.load(filename+'.npz')
+                        sio.savemat(filename, npzfile)
+                    except IOError:
+                        print("An error occured trying to read the file: {}.".format(filename+'.npz'))
+
+
+
+
+                # self.appendDFToCSV_void(df=df, csvFilename=csvFilename, sep=self.sep, encoding=self.enconding)
+                print("      Writing {} rows to: {}".format(len(df), filename))
+            else:
+                print("      Warning: there is not any row to be written for the file: {}".format(self.image.filename))
+
+            return True
+
+        else:
+            print("    Error: In the SlidingWindowPlugin, process() method does not found {} key to process.".format(
+                self.input_key[0]))
+
+        return False
+
 
 
 
