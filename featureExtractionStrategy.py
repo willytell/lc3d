@@ -289,6 +289,7 @@ class RadiomicParallelClass(FeatureExtractionStrategy):
         global results
         results = []
 
+        # TODO: add parameter
         pool = mp.Pool(mp.cpu_count()-1)
 
         for x in range(max_x):  # x: row
