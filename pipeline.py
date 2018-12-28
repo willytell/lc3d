@@ -6,7 +6,7 @@ from utils import get_components
 from plugin import LabelPlugin, VolumeBBoxPlugin, ExpandVBBoxPlugin, SaveVBBoxNiftiPlugin, SlidingWindowPlugin, SaveFeaturesPlugin
 from expansionStrategy import UniformExpansion, Bg_pExpansion
 from slidingwindow import SlidingWindow
-from featureExtractionStrategy import RadiomicClass
+from featureExtractionStrategy import RadiomicClass, RadiomicParallelClass
 
 
 class Pipeline(ABC):
@@ -135,7 +135,7 @@ class FeatureExtractionPipeline(Pipeline):
                                         axes=None,
                                         toend=True)
 
-        myRadiomic = RadiomicClass('Radiomic')
+        myRadiomic = RadiomicParallelClass('Radiomic')
 
         myRadiomic.build_mask_trick(self.config.window_size)
         myRadiomic.build_extractor(self.config.radiomicConfigFile)

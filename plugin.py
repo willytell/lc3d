@@ -380,7 +380,7 @@ class SaveFeaturesPlugin(Plugin):
                         # Create a Pandas Excel writer using XlsxWriter as the engine.
                         writer = pd.ExcelWriter(filename, engine='xlsxwriter')
                         # Convert the dataframe to an XlsxWriter Excel object.
-                        df.to_excel(writer, sheet_name='Sheet1')
+                        df.to_excel(writer, sheet_name='Sheet1', index=False)
                         # Close the Pandas Excel writer and output the Excel file.
                         writer.save()
                     else:
