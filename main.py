@@ -1,7 +1,6 @@
 import argparse
-
 from configuration import Configuration
-from input import NiftiFormat
+from pipeline import FeatureExtractionPipeline
 
 def main ():
     parser = argparse.ArgumentParser(description='lc3d')
@@ -13,7 +12,7 @@ def main ():
 
     args = parser.parse_args()
 
-    conf = Configuration(args.config_file, args.action).load()
+    config = Configuration(args.config_file, args.action).load()
 
     #if args.verbose:
     #    print("verbose...")
@@ -22,9 +21,9 @@ def main ():
 
     if args.action == 'extract_features':
         print ("Extracting features...")
-
-    n = NiftiFormat("", "", "", "")
-    n.get_next()
+        myFeatureExtractionPipeline = FeatureExtractionPipeline('FeatureExtractionProcessing', config)
+        myFeatureExtractionPipeline.build_stack()
+        myFeatureExtractionPipeline.run()
 
 
 if __name__ == '__main__':

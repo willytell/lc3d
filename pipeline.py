@@ -135,7 +135,8 @@ class FeatureExtractionPipeline(Pipeline):
                                         axes=None,
                                         toend=True)
 
-        myRadiomic = RadiomicParallelClass('Radiomic')
+        #myRadiomic = RadiomicClass('Radiomic')
+        myRadiomic = RadiomicParallelClass('Radiomic', self.config.radiomicNCores)
 
         myRadiomic.build_mask_trick(self.config.window_size)
         myRadiomic.build_extractor(self.config.radiomicConfigFile)

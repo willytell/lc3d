@@ -265,7 +265,8 @@ def do_it(i, x, y, z, flattened_index, winSize, paramPath, volume, label_value, 
 
 
 class RadiomicParallelClass(FeatureExtractionStrategy):
-    def __init__(self, name):
+    def __init__(self, name, ncores):
+        self.radiomicNCores = ncores
         super().__init__(name)
 
     def build_mask_trick(self, window_size):
@@ -290,7 +291,7 @@ class RadiomicParallelClass(FeatureExtractionStrategy):
         results = []
 
         # TODO: add parameter
-        pool = mp.Pool(mp.cpu_count()-1)
+        pool = mp.Pool(self.radiomicNCores)    # pool = mp.Pool(mp.cpu_count()-1)
 
         for x in range(max_x):  # x: row
             for y in range(max_y):  # y: column
