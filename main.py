@@ -19,7 +19,9 @@ def main ():
     #elif args.quite:
     #    print("quite...")
 
-    if args.action == 'extract_features':
+    print("arg.action: {}".format(args.action))
+
+    if args.action == "extract features":
         print ("Extracting features...")
         myFeatureExtractionPipeline = FeatureExtractionPipeline('FeatureExtractionProcessing', config)
         myFeatureExtractionPipeline.build_stack()

@@ -60,7 +60,7 @@ mode                    = 'edge'        # ['constant'|'edge'|'mean'| etc.] Look 
 # Radiomic
 radiomicConfigFile      = "/home/gtorres/Documentos/PhD/lc3d/config/Params.yaml"
 #radiomicLogPath         = "/home/gtorres/Documentos/PhD/lc3d/log"
-radiomicNCores          = 54            # n cores to use in parallel
+radiomicNCores          = 16            # n cores to use in parallel
 
 # Radiomic output file and its config
 radiomicOutputPath      = "/home/gtorres/Documentos/PhD/lc3d/output"
