@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 import SimpleITK as sitk
 import numpy as np
 import pandas as pd
+import time
 import multiprocessing as mp
 
 import os
@@ -142,8 +143,10 @@ class RadiomicClass(FeatureExtractionStrategy):
 
         max_z, max_x, max_y = array.shape[:3]
 
-        print("      max_z: {}, max_x: {}, max_y: {}".format(max_z, max_x, max_y))
-        print("      Extracting new {} rows of features.".format(max_z * max_x * max_y))
+        print("         max_z: {}, max_x: {}, max_y: {}".format(max_z, max_x, max_y))
+        print("         Extracting new {} rows of features.".format(max_z * max_x * max_y))
+
+        start_time = time.process_time()
 
         mydict = []
         for x in range(max_x):  # x: row
@@ -197,6 +200,9 @@ class RadiomicClass(FeatureExtractionStrategy):
                     mydict.append(od)
 
         df = pd.DataFrame.from_dict(mydict)
+
+        elapsed_time = time.process_time() - start_time  # it measures in seconds
+        print("      Elapsed time for Radiomic to extract features: {:.2f} seconds.".format(elapsed_time))
 
         return df
 
@@ -284,8 +290,10 @@ class RadiomicParallelClass(FeatureExtractionStrategy):
 
         max_z, max_x, max_y = array.shape[:3]
 
-        print("      max_z: {}, max_x: {}, max_y: {}".format(max_z, max_x, max_y))
-        print("      Extracting new {} rows of features.".format(max_z * max_x * max_y))
+        print("         max_z: {}, max_x: {}, max_y: {}".format(max_z, max_x, max_y))
+        print("         Extracting new {} rows of features.".format(max_z * max_x * max_y))
+
+        start_time = time.process_time()
 
         global results
         results = []
@@ -315,6 +323,9 @@ class RadiomicParallelClass(FeatureExtractionStrategy):
         results_final = [r for i, r in results]
 
         df = pd.DataFrame.from_dict(results_final)
+
+        elapsed_time = time.process_time() - start_time  # it measures in seconds
+        print("      Elapsed time for Radiomic to extract features: {:.2f} seconds.".format(elapsed_time))
 
         return df
 

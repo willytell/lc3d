@@ -2,6 +2,7 @@ import SimpleITK as sitk
 import numpy as np
 import pandas as pd
 import os
+import time
 import scipy.io as sio  # to save matlab files (.mat)
 
 from configuration import Configuration
@@ -290,11 +291,12 @@ class SlidingWindowPlugin(Plugin):
             # little_cubes will contains all the small volumes generated
             # after the window have been shifted throughout the volume.
             # By the way, little_cubes is an numpy object.
+            start_time = time.process_time()
             little_cubes = self.slidingWindow.rolling_window(newVolume)
+            elapsed_time = time.process_time() - start_time  # it measures in seconds
 
 
-            print("    little_cubes.shape : {}".format(little_cubes.shape))
-
+            print("    little_cubes.shape : {}, computed in: {:.2f} seconds.".format(little_cubes.shape, elapsed_time))
 
 
             if little_cubes is not None:

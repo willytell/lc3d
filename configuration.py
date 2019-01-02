@@ -11,8 +11,8 @@ class Configuration():
         config = SourceFileLoader('config', self.config_file).load_module()
 
         # Train the cnn
-        if self.action == 'voi+':
-            print("Action is voi+...")
+        #if self.action == 'voi+':
+        #    print("Action is voi+...")
 
             #config.output_path = os.path.join(config.experiments_path, config.experiment_name, config.model_output_directory)
 
