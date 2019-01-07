@@ -222,6 +222,9 @@ def do_it(i, x, y, z, flattened_index, winSize, paramPath, volume, label_value, 
 
     mask_trick = np.ones((winSize, winSize, winSize), dtype=np.int)
     maskITK = sitk.GetImageFromArray(mask_trick)
+    maskITK.origin = origin
+    maskITK.spacing = spacing
+    maskITK.direction = direction
 
     extractor = featureextractor.RadiomicsFeaturesExtractor(paramPath)
 
