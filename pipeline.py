@@ -1,7 +1,7 @@
 import sys
 import time
 from abc import ABC, abstractmethod
-from input import NiftiManagementPlugin
+from input import NiftiManagementPlugin, MatlabMaskManagementPlugin
 from utils import get_components
 from plugin import LabelPlugin, VolumeBBoxPlugin, ExpandVBBoxPlugin, SaveVBBoxNiftiPlugin, SlidingWindowPlugin, SaveFeaturesPlugin
 from expansionStrategy import UniformExpansion, Bg_pExpansion
@@ -52,20 +52,22 @@ class VBBoxPerNodulePipeline(Pipeline):
         super().__init__(name, config)
 
     def build_stack(self):
+
         # Plugin NiftiManagement
-        myNiftiManagement = NiftiManagementPlugin('CT',
-                                                  None,
-                                                  self.config.src_image_path,
-                                                  self.config.src_mask_path,
-                                                  self.config.mask_pattern,
-                                                  self.config.dst_image_path,
-                                                  self.config.dst_mask_path,
-                                                  internal=self.config.internal_input)
-        myNiftiManagement.masks2read()
-        self.plugins_stack.append(myNiftiManagement)
+        myNiftiManagementPlugin = NiftiManagementPlugin('CT',
+                                                        None,
+                                                        self.config.src_image_path,
+                                                        self.config.src_mask_path,
+                                                        self.config.mask_pattern,
+                                                        self.config.dst_image_path,
+                                                        self.config.dst_mask_path,
+                                                        internal=self.config.internal_input)
+
+        myNiftiManagementPlugin.masks2read()
+        self.plugins_stack.append(myNiftiManagementPlugin)
 
         # Plugin Labeling
-        myLabeling = LabelPlugin('CT_mask_labeled', [myNiftiManagement.name])
+        myLabeling = LabelPlugin('CT_mask_labeled', [myNiftiManagementPlugin.name])
         dim_x, dim_y, dim_z = get_components(self.config.labeling_se_dim)
         myLabeling.set_structure_element(dim_x, dim_y, dim_z)
         self.plugins_stack.append(myLabeling)
@@ -86,13 +88,15 @@ class VBBoxPerNodulePipeline(Pipeline):
         myExpandVBBoxTwo = ExpandVBBoxPlugin('CT_mask_vbbox_Bg_p_expansion', [myLabeling.name, myExpandVBBoxOne.name], myBg_pExpansion)
         self.plugins_stack.append(myExpandVBBoxTwo)
 
+
         # Plugin SaveVBBoxNifti
         mySaveVBBoxNifti = SaveVBBoxNiftiPlugin('SaveVBBoxNifti',
-                                                [myNiftiManagement.name, myExpandVBBoxTwo.name],
+                                                [myNiftiManagementPlugin.name, myExpandVBBoxTwo.name],
                                                 self.config.dst_image_path,
                                                 self.config.dst_mask_path,
-                                                internal = self.config.internal_input)
+                                                internal=self.config.internal_input)
         self.plugins_stack.append(mySaveVBBoxNifti)
+
 
     def run(self):
         print("Running VBBoxPerNoduleProcessing...")
@@ -107,6 +111,76 @@ class VBBoxPerNodulePipeline(Pipeline):
         elapsed_time = time.process_time() - start_time  # it measures in seconds
         elapsed_time /= 60  # to minutes
         print("Elapsed time for the FeatureExtractionProcessing: {:.2f} minutes.".format(elapsed_time))
+
+
+
+class VBBoxPerNoduleOnlyMaskPipeline(Pipeline):
+    def __init__(self, name, config):
+        super().__init__(name, config)
+
+    def build_stack(self):
+
+        # Plugin MatlabMaskManagement, input format are files .mat
+        myMatlabMaskManagementPlugin = MatlabMaskManagementPlugin('CT',
+                                                                  None,
+                                                                  self.config.src_mask_path,
+                                                                  self.config.mask_pattern,
+                                                                  self.config.dst_mask_path,
+                                                                  self.config.variable_name)
+
+
+        myMatlabMaskManagementPlugin.masks2read()
+        self.plugins_stack.append(myMatlabMaskManagementPlugin)
+
+        # Plugin Labeling
+        myLabeling = LabelPlugin('CT_mask_labeled', [myMatlabMaskManagementPlugin.name])
+        dim_x, dim_y, dim_z = get_components(self.config.labeling_se_dim)
+        myLabeling.set_structure_element(dim_x, dim_y, dim_z)
+        self.plugins_stack.append(myLabeling)
+
+        # Plugin VolumeBBox
+        myVolumeBBox = VolumeBBoxPlugin('CT_mask_vbbox', [myLabeling.name])
+        self.plugins_stack.append(myVolumeBBox)
+
+        # Plugin ExpandVBBoxPlugin: instance num. 1
+        myUniformExpansion = UniformExpansion('UniformExpansion', self.config.uniform_nvoxels,
+                                              self.config.uniform_limit)
+        myExpandVBBoxOne = ExpandVBBoxPlugin('CT_mask_vbbox_uniform_expansion', [myLabeling.name, myVolumeBBox.name],
+                                             myUniformExpansion)
+        self.plugins_stack.append(myExpandVBBoxOne)
+
+        # Plugin ExpandVBBoxPlugin: instance num. 2
+        myBg_pExpansion = Bg_pExpansion('Bg_pExpansion', self.config.background_p, self.config.groundtruth_p,
+                                        self.config.bg_p_nvoxels,
+                                        self.config.check_bg_percentage)
+        myExpandVBBoxTwo = ExpandVBBoxPlugin('CT_mask_vbbox_Bg_p_expansion', [myLabeling.name, myExpandVBBoxOne.name],
+                                             myBg_pExpansion)
+        self.plugins_stack.append(myExpandVBBoxTwo)
+
+        # Plugin SaveVBBoxNifti
+        mySaveVBBoxNifti = SaveVBBoxNiftiPlugin('SaveVBBoxNifti',
+                                                [myMatlabMaskManagementPlugin.name, myExpandVBBoxTwo.name],
+                                                self.config.dst_image_path,
+                                                self.config.dst_mask_path,
+                                                internal=self.config.internal_input,
+                                                save_image_flag=False,  # We do not save images.
+                                                save_mask_flag=True)    # Only we are saving masks.
+        self.plugins_stack.append(mySaveVBBoxNifti)
+
+
+    def run(self):
+        print("Running VBBoxPerNoduleOnlyMaskProcessing...")
+        continueProcessing = True
+
+        start_time = time.process_time()  # process_time does not include time elapsed during sleep.
+
+        while continueProcessing:
+            continueProcessing = super().execute_stack()
+            print("--------------------------------------------------------------------")
+
+        elapsed_time = time.process_time() - start_time  # it measures in seconds
+        elapsed_time /= 60  # to minutes
+        print("Elapsed time for the VBBoxPerNoduleOnlyMaskProcessing: {:.2f} minutes.".format(elapsed_time))
 
 
 class FeatureExtractionPipeline(Pipeline):
@@ -212,11 +286,23 @@ class FeatureExtractionPipeline(Pipeline):
 def debug_test():
     from configuration import Configuration
 
-    config = Configuration("config/conf_part4.py", "extract features").load()
+    config_file = "config/conf_part5.py"
+    print("VBBoxPerNoduleOnlyMaskPipeline using the configuration file: {}".format(config_file))
 
-    myFeatureExtractionPipeline = FeatureExtractionPipeline('FeatureExtractionProcessing', config)
-    myFeatureExtractionPipeline.build_stack()
-    myFeatureExtractionPipeline.run()
+    config = Configuration(config_file, "ROI").load()
+    # OnlyMask
+    myVBBoxPerNoduleOnlyMaskProcessing = VBBoxPerNoduleOnlyMaskPipeline('VBBoxPerNoduleOnlyMaskPipeline', config)
+    myVBBoxPerNoduleOnlyMaskProcessing.build_stack()
+    myVBBoxPerNoduleOnlyMaskProcessing.run()
+
+# def debug_test():
+#     from configuration import Configuration
+#
+#     config = Configuration("config/conf_part4.py", "extract features").load()
+#
+#     myFeatureExtractionPipeline = FeatureExtractionPipeline('FeatureExtractionProcessing', config)
+#     myFeatureExtractionPipeline.build_stack()
+#     myFeatureExtractionPipeline.run()
 
 
 if __name__ == '__main__':

@@ -187,10 +187,12 @@ class ExpandVBBoxPlugin(Plugin):
 
 
 class SaveVBBoxNiftiPlugin(Plugin):
-    def __init__(self, name, input_key, dst_image_path, dst_mask_path, internal=1):
+    def __init__(self, name, input_key, dst_image_path, dst_mask_path, internal=1, save_image_flag=True, save_mask_flag=True):
         self.dst_image_path = dst_image_path
         self.dst_mask_path = dst_mask_path
         self.internal=internal
+        self.save_image_flag = save_image_flag
+        self.save_mask_flag = save_mask_flag
         # self.image = None
         # self.mask = None
         super().__init__(name, input_key)
@@ -213,33 +215,40 @@ class SaveVBBoxNiftiPlugin(Plugin):
             for label_number, vbbox in enumerate(vbbox_list):
                 if label_number != 0:       # skipping the background, which has a label = 0.
 
-                    # Mask
-                    expanded_mask = NiftiFormat()
-                    expanded_mask.volume = np.copy(mask.volume[vbbox[0]:vbbox[1]+1, \
-                                                               vbbox[2]:vbbox[3]+1, \
-                                                               vbbox[4]:vbbox[5]+1])
-                    expanded_mask.array2image()
-                    print("    Array2Image: array {} to image {}".format(expanded_mask.volume.shape, expanded_mask.image.GetSize()))
-                    expanded_mask.set_properties(properties=mask.get_properties())
-
                     # Get the names for the image and mask
-                    if self.internal == 2:
+                    if self.internal == 3:
+                        mask_fname = mask.filename + '_GT1_' + str(label_number) + '_Mask.nii'
+                    elif self.internal == 2:
                         image_fname, mask_fname = image.filename, mask.filename
                     else:
                         # by default
                         image_fname, mask_fname = get_dst_filename_nifti(mask.filename, label_number)
 
-                    expanded_mask.save(self.dst_mask_path, mask_fname)
 
-                    # Image
-                    expanded_image = NiftiFormat()
-                    expanded_image.volume = np.copy(image.volume[vbbox[0]:vbbox[1]+1, \
-                                                                 vbbox[2]:vbbox[3]+1, \
-                                                                 vbbox[4]:vbbox[5]+1])
-                    expanded_image.array2image()
-                    print("    Array2Image: array {} to image {}".format(expanded_image.volume.shape, expanded_image.image.GetSize()))
-                    expanded_image.set_properties(properties=image.get_properties())
-                    expanded_image.save(self.dst_image_path, image_fname)
+                    if self.save_mask_flag:
+                        # Mask
+                        print("    Saving mask.")
+                        expanded_mask = NiftiFormat()
+                        expanded_mask.volume = np.copy(mask.volume[vbbox[0]:vbbox[1]+1, \
+                                                                   vbbox[2]:vbbox[3]+1, \
+                                                                   vbbox[4]:vbbox[5]+1])
+                        expanded_mask.array2image()
+                        print("    Array2Image: array {} to image {}".format(expanded_mask.volume.shape, expanded_mask.image.GetSize()))
+                        expanded_mask.set_properties(properties=mask.get_properties())
+                        expanded_mask.save(self.dst_mask_path, mask_fname)
+
+
+                    if self.save_image_flag:
+                        # Image
+                        print("    Saving image.")
+                        expanded_image = NiftiFormat()
+                        expanded_image.volume = np.copy(image.volume[vbbox[0]:vbbox[1]+1, \
+                                                                     vbbox[2]:vbbox[3]+1, \
+                                                                     vbbox[4]:vbbox[5]+1])
+                        expanded_image.array2image()
+                        print("    Array2Image: array {} to image {}".format(expanded_image.volume.shape, expanded_image.image.GetSize()))
+                        expanded_image.set_properties(properties=image.get_properties())
+                        expanded_image.save(self.dst_image_path, image_fname)
 
             return True
 
@@ -247,6 +256,7 @@ class SaveVBBoxNiftiPlugin(Plugin):
             print("    Error: In SaveVBBoxNifti, process() method does not found {} and {} keys to process.".format(self.input_key[0], self.input_key[1]))
 
         return False
+
 
 
 class SlidingWindowPlugin(Plugin):

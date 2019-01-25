@@ -10,6 +10,13 @@ class ExpansionStrategy(ABC):
 
     # count = np.zeros(ncomponents + 1)
     def count_all_labels(self, volume, ncomponents, count):
+        # print("volume.max: {}".format(volume.max()))
+        # print("volume.min: {}".format(volume.min()))
+        #
+        # unique, counts = np.unique(volume, return_counts=True)
+        # print("unique : {}".format(unique))
+        # print("counts : {}".format(counts))
+
         for l in range(0, ncomponents + 1):  # include the label '0' that corresponds to background.
             count[l] = len(np.where(volume == l)[0])
 
@@ -165,7 +172,7 @@ class UniformExpansion(ExpansionStrategy):
     def expand(self, labeled, minimal_vbbox, ncomponents, label_number):
         tmp_vbbox = minimal_vbbox
 
-        # if nvoxel is a sequence, this is a range from whrere a number must be selected randomly. Then this number
+        # if nvoxel is a sequence, this is a range from where a number must be selected randomly. Then this number
         # will be used to increase the ROI.
         if self.nvoxel_range is not None:
             self.nvoxel = randint(self.nvoxel_range[0], self.nvoxel_range[1])

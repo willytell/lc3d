@@ -5,6 +5,8 @@ import os
 
 from plugin import Plugin
 from imageFormat import NiftiFormat
+import scipy.io as sio
+import numpy as np
 
 from configuration import Configuration
 
@@ -122,6 +124,88 @@ class NiftiManagementPlugin(Plugin):
             return False
 
 
+
+
+
+class MatlabMaskManagementPlugin(Plugin):
+    def __init__(self, name, input_key, src_mask_path, mask_pattern, dst_mask_path, variable_name):     #mask_pattern = '*.nii.gz'
+        self.src_mask_path = src_mask_path
+        self.mask_pattern = mask_pattern
+        self.dst_mask_path = dst_mask_path
+        self.variable_name = variable_name    # variable_name = 'LungMaskROI'
+
+        self.image = None
+        self.mask = None
+
+        self.src_mask_list = []
+        self.basename = ''     # e.g.: for the mask file LIDC-IDRI-0005.mat -> the basename is 'LIDC-IDRI-0005'.
+        self.filename = ''
+        self.numpy_array = None
+
+        super().__init__(name, input_key)
+
+    def masks2read(self):
+        self.src_mask_list = [os.path.basename(x) for x in sorted(glob.glob(os.path.join(self.src_mask_path, self.mask_pattern)))]
+        self.index = 0    # index to be used with the self.src_mask_list list to read all the masks.
+        return True
+
+    def get_mask_list_length(self):
+        return len(self.src_mask_list)
+
+
+    def process(self,data):
+        print("> Matlab Mask Management plugin with name: {} ...".format(self.name))
+
+        #self.name equal to 'CT'
+        if data.get(self.name) is not None:  # if already exist
+            data.pop(self.name)  # remove item
+            print("    Removing from data: '{}':[image, mask]".format(self.name))
+
+        if self.index < len(self.src_mask_list):
+            # read the mask file
+            self.mask = NiftiFormat()
+            filename= self.src_mask_list[self.index]
+            basename = filename.split('.')[0]
+            self.mask.filename = basename
+            self.mask.caseID = -1
+            self.mask.lessionID = -1
+
+            # Simulating a .nii.gz file and convertion to numpy array.
+            matlab_object = sio.loadmat(os.path.join(self.src_mask_path, basename))
+            array_xyz = matlab_object[self.variable_name]
+            new_array_zyx = np.transpose(array_xyz, (2, 1, 0))
+            self.mask.volume = new_array_zyx
+            print("    Mask shape:  {}".format(self.mask.volume.shape))
+
+            # Set manually this values
+            self.mask.origin = (-1.0, -1.0, 1.0)
+            self.mask.spacing = (1.0, 1.0, 1.0)
+            self.mask.direction = (-1.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 1.0)
+
+
+            # read the image file
+            self.image = NiftiFormat()
+            self.image.filename = ''
+            self.image.caseID = -1
+            self.image.lessionID = -1
+
+            # Simulating a .nii.gz file and convertion to numpy array.
+            self.image.volume = None #new_array_zyx
+            #print("    Image shape: {}".format(self.image.volume.shape))
+
+            #assert self.image.volume.shape == self.mask.volume.shape, \
+            #    "    In NiftiManagement, image's volume and mask's volume must have the same shape."
+
+            # add item
+            data[self.name] = [self.image, self.mask]
+            print("    Adding to data: '{}':[image, mask]".format(self.name))
+
+            self.index += 1  # increment the index for the next file to be read.
+            return True
+
+        else:
+            print("    All the masks have been processed.")
+            return False
 
 
 def debug_NiftiManagement():
