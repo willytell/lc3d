@@ -46,10 +46,14 @@ class NiftiFormat(ImageFormat):
         print("    MyNifti, writing: {}".format(os.path.join(path, filename)))
 
 
-    # CONVERTING from SimpleITK image to Numpy array
-    def image2array(self):
+    # CONVERTING from SimpleITK image to Numpy array and Normalizing by default.
+    def image2array(self, normalize_flag=True):
         if self.image is not None:
             self.volume = sitk.GetArrayFromImage(self.image)
+            if normalize_flag:
+                # normalizing the image's values
+                self.volume = (self.volume - self.volume.min()) / (self.volume.max()-self.volume.min())
+                print(">>> volume values: {}".format(self.volume))
         else:
             print("    Error: In MyNifti class, image2array method.")
 

@@ -58,6 +58,15 @@ class ExpansionStrategy(ABC):
                 count = np.zeros((ncomponents + 1), dtype=np.int)
                 volume = labeled[vbbox[0]:(vbbox[1] + nvoxel + 1), vbbox[2]:(vbbox[3] + 1), vbbox[4]:(vbbox[5] + 1)]
                 self.count_all_labels(volume, ncomponents, count)
+
+
+                print(volume[50:60, 50:60, :])
+
+                unique, counts = np.unique(volume, return_counts=True)
+                print("unique : {}".format(unique))
+                print("counts : {}".format(counts))
+
+
                 if self.one_label_present(count, label_number):
                     vbbox[1] += nvoxel
                 else:

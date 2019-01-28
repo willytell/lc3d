@@ -64,7 +64,7 @@ radiomicNCores          = 6            # n cores to use in parallel
 
 # Radiomic output file and its config
 radiomicOutputPath      = "/home/willytell/Documentos/PhD/lc3d/output"
-radiomicOutputFormat     = 'xls'         # ['csv' | 'xls']
+radiomicOutputFormat     = 'xlsx'         # ['csv' | 'xls']
 sep                     = ";"
 encoding                = "utf-8"
 

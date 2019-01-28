@@ -150,22 +150,22 @@ class VBBoxPerNoduleOnlyMaskPipeline(Pipeline):
         self.plugins_stack.append(myExpandVBBoxOne)
 
         # Plugin ExpandVBBoxPlugin: instance num. 2
-        myBg_pExpansion = Bg_pExpansion('Bg_pExpansion', self.config.background_p, self.config.groundtruth_p,
-                                        self.config.bg_p_nvoxels,
-                                        self.config.check_bg_percentage)
-        myExpandVBBoxTwo = ExpandVBBoxPlugin('CT_mask_vbbox_Bg_p_expansion', [myLabeling.name, myExpandVBBoxOne.name],
-                                             myBg_pExpansion)
-        self.plugins_stack.append(myExpandVBBoxTwo)
-
-        # Plugin SaveVBBoxNifti
-        mySaveVBBoxNifti = SaveVBBoxNiftiPlugin('SaveVBBoxNifti',
-                                                [myMatlabMaskManagementPlugin.name, myExpandVBBoxTwo.name],
-                                                self.config.dst_image_path,
-                                                self.config.dst_mask_path,
-                                                internal=self.config.internal_input,
-                                                save_image_flag=False,  # We do not save images.
-                                                save_mask_flag=True)    # Only we are saving masks.
-        self.plugins_stack.append(mySaveVBBoxNifti)
+        # myBg_pExpansion = Bg_pExpansion('Bg_pExpansion', self.config.background_p, self.config.groundtruth_p,
+        #                                 self.config.bg_p_nvoxels,
+        #                                 self.config.check_bg_percentage)
+        # myExpandVBBoxTwo = ExpandVBBoxPlugin('CT_mask_vbbox_Bg_p_expansion', [myLabeling.name, myExpandVBBoxOne.name],
+        #                                      myBg_pExpansion)
+        # self.plugins_stack.append(myExpandVBBoxTwo)
+        #
+        # # Plugin SaveVBBoxNifti
+        # mySaveVBBoxNifti = SaveVBBoxNiftiPlugin('SaveVBBoxNifti',
+        #                                         [myMatlabMaskManagementPlugin.name, myExpandVBBoxTwo.name],
+        #                                         self.config.dst_image_path,
+        #                                         self.config.dst_mask_path,
+        #                                         internal=self.config.internal_input,
+        #                                         save_image_flag=False,  # We do not save images.
+        #                                         save_mask_flag=True)    # Only we are saving masks.
+        # self.plugins_stack.append(mySaveVBBoxNifti)
 
 
     def run(self):
@@ -283,26 +283,26 @@ class FeatureExtractionPipeline(Pipeline):
 #     myVBBoxPerNoduleProcessing.build_stack()
 #     myVBBoxPerNoduleProcessing.run()
 
-def debug_test():
-    from configuration import Configuration
-
-    config_file = "config/conf_part5.py"
-    print("VBBoxPerNoduleOnlyMaskPipeline using the configuration file: {}".format(config_file))
-
-    config = Configuration(config_file, "ROI").load()
-    # OnlyMask
-    myVBBoxPerNoduleOnlyMaskProcessing = VBBoxPerNoduleOnlyMaskPipeline('VBBoxPerNoduleOnlyMaskPipeline', config)
-    myVBBoxPerNoduleOnlyMaskProcessing.build_stack()
-    myVBBoxPerNoduleOnlyMaskProcessing.run()
-
 # def debug_test():
 #     from configuration import Configuration
 #
-#     config = Configuration("config/conf_part4.py", "extract features").load()
+#     config_file = "config/conf_part5.py"
+#     print("VBBoxPerNoduleOnlyMaskPipeline using the configuration file: {}".format(config_file))
 #
-#     myFeatureExtractionPipeline = FeatureExtractionPipeline('FeatureExtractionProcessing', config)
-#     myFeatureExtractionPipeline.build_stack()
-#     myFeatureExtractionPipeline.run()
+#     config = Configuration(config_file, "ROI").load()
+#     # OnlyMask
+#     myVBBoxPerNoduleOnlyMaskProcessing = VBBoxPerNoduleOnlyMaskPipeline('VBBoxPerNoduleOnlyMaskPipeline', config)
+#     myVBBoxPerNoduleOnlyMaskProcessing.build_stack()
+#     myVBBoxPerNoduleOnlyMaskProcessing.run()
+
+def debug_test():
+    from configuration import Configuration
+
+    config = Configuration("config/conf_part4_srv.py", "extract features").load()
+
+    myFeatureExtractionPipeline = FeatureExtractionPipeline('FeatureExtractionProcessing', config)
+    myFeatureExtractionPipeline.build_stack()
+    myFeatureExtractionPipeline.run()
 
 
 if __name__ == '__main__':

@@ -32,14 +32,14 @@ uniform_limit           = 1             # Uniform Expansion: limit in each direc
 
 # Bg_pExpansion
 background_p            = 50
-groundtruth_p           = 40
+groundtruth_p           = 50
 bg_p_nvoxels            = 1             # Bg_p Expansion: amount of voxels to increment in each step.
 check_bg_percentage     = True          # Check the background percentage during the expansion
 
 # physicianDeltaExpansion
-physicianDelta_expand_x = [5, 5]      # [expandX1, expandX2]
-physicianDelta_expand_y = [5, 5]
-physicianDelta_expand_z = [5, 5]
+physicianDelta_expand_x = None #[5, 5]      # [expandX1, expandX2]
+physicianDelta_expand_y = None #[5, 5]
+physicianDelta_expand_z = None #[5, 5]
 
 physicianDelta_growth_x = 1             # int to increase in x axis
 physicianDelta_growth_y = 1
@@ -64,7 +64,7 @@ radiomicNCores          = 16            # n cores to use in parallel
 
 # Radiomic output file and its config
 radiomicOutputPath      = "/home/gtorres/Documentos/PhD/lc3d/output"
-radiomicOutputFormat     = 'xls'         # ['csv' | 'xls']
+#radiomicOutputFormat     = 'xlsx'         # ['csv' | 'xlsx']
 sep                     = ";"
 encoding                = "utf-8"
 

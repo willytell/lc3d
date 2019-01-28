@@ -65,7 +65,6 @@ class LabelPlugin(Plugin):
         return False
 
 
-
 class VolumeBBoxPlugin(Plugin):
     def __init__(self, name, input_key):
         self.vbbox_list = []
