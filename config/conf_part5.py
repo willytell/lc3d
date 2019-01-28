@@ -4,9 +4,9 @@
 
 # DB SOURCE PATHS
 src_image_path          = ""
-src_mask_path           = "/home/willytell/Desktop/LungCTDataBase/CTLungSeg"
+src_mask_path           = "/home/willytell/Escritorio/LungCTDataBase/CTLungSeg"
 
-variable_name           = 'LungMaskROI'    # ['LungMaskROI' | 'LungMaskAll'] to read from .mat file.
+variable_name           = 'LungMaskROIAll'    # ['LungMaskROI' | 'LungMaskROIAll'] to read from .mat file.
 
 # Set internal_input = 1 if image and mask have the following string pattern:
 #  Image filename: LIDC-IDRI-0001_GT1.nii.gz
@@ -23,7 +23,7 @@ mask_pattern            = '*.mat'
 
 # OUTPUT PATHS
 dst_image_path          = None
-dst_mask_path           = "/home/willytell/Desktop/LungCTDataBase/CTLungMaskROI"
+dst_mask_path           = "/home/willytell/Escritorio/LungCTDataBase/CTLungMaskROIAll"
 
 
 # Labeling
