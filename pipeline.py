@@ -302,7 +302,7 @@ def debug_test():
 
     myFeatureExtractionPipeline = FeatureExtractionPipeline('FeatureExtractionProcessing', config)
     myFeatureExtractionPipeline.build_stack()
-    myFeatureExtractionPipeline.run() 
+    myFeatureExtractionPipeline.run()
 
 
 if __name__ == '__main__':

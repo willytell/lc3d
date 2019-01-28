@@ -98,7 +98,7 @@ class NiftiManagementPlugin(Plugin):
             self.mask.read(self.src_mask_path, self.mask_filename)
             self.mask.caseID = self.caseID
             self.mask.lessionID = self.lessionID
-            self.mask.image2array()
+            self.mask.image2array(normalize_flag=False)
             print("    Mask shape:  {}".format(self.mask.volume.shape))
 
             # read the image file
@@ -107,7 +107,7 @@ class NiftiManagementPlugin(Plugin):
             self.image.read(self.src_image_path, self.image_filename)
             self.image.caseID = self.caseID
             self.image.lessionID = self.lessionID
-            self.image.image2array()
+            self.image.image2array(normalize_flag=True)
             print("    Image shape: {}".format(self.image.volume.shape))
 
             assert self.image.volume.shape == self.mask.volume.shape, "    In NiftiManagement, it is supposed that image's volume and mask's volume should have the same shape."

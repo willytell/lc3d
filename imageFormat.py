@@ -47,7 +47,7 @@ class NiftiFormat(ImageFormat):
 
 
     # CONVERTING from SimpleITK image to Numpy array and Normalizing by default.
-    def image2array(self, normalize_flag=True):
+    def image2array(self, normalize_flag=False):
         if self.image is not None:
             self.volume = sitk.GetArrayFromImage(self.image)
             if normalize_flag:
