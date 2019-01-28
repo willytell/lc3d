@@ -298,7 +298,7 @@ class FeatureExtractionPipeline(Pipeline):
 def debug_test():
     from configuration import Configuration
 
-    config = Configuration("config/conf_part4_srv.py", "extract features").load()
+    config = Configuration("config/conf_part4.py", "extract features").load()
 
     myFeatureExtractionPipeline = FeatureExtractionPipeline('FeatureExtractionProcessing', config)
     myFeatureExtractionPipeline.build_stack()

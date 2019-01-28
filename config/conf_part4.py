@@ -3,8 +3,8 @@
 
 
 # DB SOURCE PATHS
-src_image_path          = "/home/willytell/Escritorio/LungCTDataBase/lc3d/Nii_Vol/CTRoi_nii"
-src_mask_path           = "/home/willytell/Escritorio/LungCTDataBase/lc3d/Nii_Vol/CTRoimask_nii"
+src_image_path          = "/home/willytell/Desktop/LungCTDataBase/lc3d/Nii_Vol/CTRoi_nii"
+src_mask_path           = "/home/willytell/Desktop/LungCTDataBase/lc3d/Nii_Vol/CTRoimask_nii"
 
 # Set internal_input = 1 if image and mask have the following string pattern:
 #  Image filename: LIDC-IDRI-0001_GT1.nii.gz
@@ -58,13 +58,13 @@ deltaZ                  = 1             # slide l voxel in z direction
 mode                    = 'edge'        # ['constant'|'edge'|'mean'| etc.] Look inside np.pad() for all the modes.
 
 # Radiomic
-radiomicConfigFile      = "/home/willytell/Documentos/PhD/lc3d/config/Params.yaml"
+radiomicConfigFile      = "/home/willytell/Documents/PhD/lc3d/config/Params.yaml"
 #radiomicLogPath         = "/home/willytell/Documentos/PhD/lc3d/log"
 radiomicNCores          = 6            # n cores to use in parallel
 
 # Radiomic output file and its config
-radiomicOutputPath      = "/home/willytell/Documentos/PhD/lc3d/output"
-radiomicOutputFormat     = 'xlsx'         # ['csv' | 'xls']
+radiomicOutputPath      = "/home/willytell/Documents/PhD/lc3d/output"
+#radiomicOutputFormat     = 'xlsx'         # ['csv' | 'xls']
 sep                     = ";"
 encoding                = "utf-8"
 
