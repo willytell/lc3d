@@ -53,6 +53,7 @@ class NiftiFormat(ImageFormat):
             if normalize_flag:
                 # normalizing the image's values
                 self.volume = (self.volume - self.volume.min()) / (self.volume.max()-self.volume.min())
+                print(">>>>>>>>>>>>>>>>>>>>>")
                 print(">>> volume values: {}".format(self.volume))
         else:
             print("    Error: In MyNifti class, image2array method.")
