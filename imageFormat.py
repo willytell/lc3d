@@ -52,7 +52,7 @@ class NiftiFormat(ImageFormat):
             self.volume = sitk.GetArrayFromImage(self.image)
             if normalize_flag:
                 # normalizing the image's values
-                self.volume = (self.volume - self.volume.min()) / (self.volume.max()-self.volume.min())
+                self.volume = (self.volume - self.volume.min()) / (self.volume.max()-self.volume.min()) #* 255.0
                 print("    Normalizing Image between [0, 1] doing: (volume - volume.min()) / (volume.max() - volume.min())")
         else:
             print("    Error: In MyNifti class, image2array method.")
